@@ -232,8 +232,3 @@ async def continue_story_branch(
             return dict(response)
         except ValueError:
             return response
-
-    # TODO: check if you can unify the logic to for loop. add last_scene to scenes, then do the loop, and remove the last message back at the end
-    # TODO: get n_scenes by probability
-    # TODO: generate new scene based on previous messages
-    # TODO: parse json and return
