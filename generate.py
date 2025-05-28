@@ -1,5 +1,8 @@
 import json
+import random
+from typing import List
 from chatbot import ChatBot
+from db_models import Choice, Scene, Story
 
 
 async def generate_description(chatbot: ChatBot):
@@ -94,3 +97,143 @@ async def generate_story_metadata(chatbot: ChatBot, description: str):
             return dict(story_metadata)
         except ValueError:
             return story_metadata
+
+
+USER_FIRST_MESSAGE_TEMPLATE = (
+    "Generate the first scene (1/{n_scene_total}) with 1 choice!"
+)
+USER_MESSAGE_TEMPLATE = (
+    'Player proceeds with "{choice}". '
+    "Generate next scene ({n_scene}/{n_scene_total}) with {n_choices} choice(s)!"
+)
+USER_FINAL_MESSAGE_TEMPLATE = (
+    'Player proceeds with "{choice}". '
+    "Generate final scene ({n_scene}/{n_scene_total}) with 1 choice to end the story!"
+)
+
+
+async def continue_story_branch(
+    chatbot: ChatBot, story: Story, scenes: List[Scene], choices: List[Choice]
+):
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                "You're best story teller. Given the story metadata:\n"
+                f"{story.model_dump()}\n\n(/no_think)\n"
+                f"You will create a story with {story.n_scenes} scenes.\n"
+                "IMPORTANT: you output only valid json of the following format:\n"
+                '{"text": "<scene description>", "choices": [{"text": "<choice description>", "loading_text": "<your thoughts>"}, ...]}'
+            ),
+        },
+        # {
+        #     "role": "user",
+        #     "content": USER_FIRST_MESSAGE_TEMPLATE.format(n_scene_total=story.n_scenes),
+        # },
+    ]
+
+    _scenes = scenes + [None]
+    _choices = [None] + choices
+
+    for i, (scene, selected_choice) in enumerate(zip(_scenes, _choices)):
+        if selected_choice is None:  # i == 0:
+            messages.append(
+                {
+                    "role": "user",
+                    "content": USER_FIRST_MESSAGE_TEMPLATE.format(
+                        n_scene_total=story.n_scenes
+                    ),
+                }
+            )
+        elif i == story.n_scenes - 1:
+            messages.append(
+                {
+                    "role": "user",
+                    "content": USER_FINAL_MESSAGE_TEMPLATE.format(
+                        choice=selected_choice.text,
+                        n_scene=i + 1,
+                        n_scene_total=story.n_scenes,
+                    ),
+                }
+            )
+        elif scene:
+            messages.append(
+                {
+                    "role": "user",
+                    "content": USER_MESSAGE_TEMPLATE.format(
+                        choice=selected_choice.text,
+                        n_scene=i + 1,
+                        n_scene_total=story.n_scenes,
+                        n_choices=len(scene.choices),
+                    ),
+                }
+            )
+
+        if scene:
+            messages.append(
+                {
+                    "role": "assistant",
+                    "content": json.dumps(
+                        {
+                            "text": scene.text,
+                            "choices": [
+                                {"text": c.text, "loading_text": c.loading_text}
+                                for c in scene.choices
+                            ],
+                        }
+                    ),
+                }
+            )
+        else:
+            if i != len(_scenes) - 1:
+                raise ValueError(
+                    f"Scene {i + 1} is None, but it should not be. Scenes: {len(_scenes)} (actually {len(scenes)})"
+                )
+
+    selected_choice = choices[-1]
+
+    if len(_scenes) == story.n_scenes:
+        messages.append(
+            {
+                "role": "user",
+                "content": USER_FINAL_MESSAGE_TEMPLATE.format(
+                    choice=selected_choice.text,
+                    n_scene=len(_scenes),
+                    n_scene_total=story.n_scenes,
+                ),
+            }
+        )
+    else:
+        n_choices = random.choices(
+            list(story.choices_weights.keys()),
+            weights=list(story.choices_weights.values()),
+            k=1,
+        )[0]
+        messages.append(
+            {
+                "role": "user",
+                "content": USER_MESSAGE_TEMPLATE.format(
+                    choice=selected_choice.text,
+                    n_scene=len(_scenes),
+                    n_scene_total=story.n_scenes,
+                    n_choices=n_choices,
+                ),
+            }
+        )
+
+    response = await chatbot.prompt(messages)
+
+    response = response.replace("<think>\n\n</think>\n\n", "").strip()
+
+    try:
+        return json.loads(response)
+    except json.JSONDecodeError:
+        try:
+            return dict(response)
+        except ValueError:
+            return response
+
+    # TODO: check if you can unify the logic to for loop. add last_scene to scenes, then do the loop, and remove the last message back at the end
+    # TODO: get n_scenes by probability
+    # TODO: generate new scene based on previous messages
+    # TODO: parse json and return
