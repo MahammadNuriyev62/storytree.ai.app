@@ -1,0 +1,279 @@
+{% extends "base.html" %} {% block title %}Playing {{ story.title }} -
+ParallelStory{% endblock %} {% block content %}
+<div class="max-w-4xl mx-auto">
+  <!-- Story Header -->
+  <div class="glass p-4 rounded-2xl mb-6 flex items-center justify-between">
+    <div class="flex items-center space-x-4">
+      <a
+        href="/stories/{{ story.id }}"
+        class="hover:scale-105 transition-transform"
+        >← Back</a
+      >
+      <h1 class="text-xl font-bold">{{ story.title }}</h1>
+    </div>
+    <div class="flex items-center space-x-4">
+      <button
+        id="restart-btn"
+        class="text-sm hover:text-purple-200 transition-colors"
+      >
+        🔄 Restart
+      </button>
+    </div>
+  </div>
+
+  <!-- Scene Container -->
+  <div id="scene-container" class="glass p-8 rounded-2xl mb-6">
+    <!-- Loading State -->
+    <div id="loading-scene" class="text-center py-12">
+      <div class="text-4xl mb-4 animate-bounce">📖</div>
+      <p class="text-xl">Loading your story...</p>
+    </div>
+
+    <!-- Scene Content -->
+    <div id="scene-content" class="hidden">
+      <div
+        id="scene-text"
+        class="text-lg leading-relaxed mb-8 animate-fade-in"
+      ></div>
+
+      <!-- Choices -->
+      <div id="choices-container" class="space-y-4"></div>
+    </div>
+
+    <!-- Choice Loading -->
+    <div id="choice-loading" class="hidden text-center py-12">
+      <div class="text-4xl mb-4 animate-pulse">📖</div>
+      <p id="loading-text" class="text-xl">Thinking...</p>
+    </div>
+  </div>
+
+  <!-- Story End -->
+  <div id="story-end" class="hidden glass p-8 rounded-2xl text-center">
+    <div class="text-6xl mb-4">🎉</div>
+    <h2 class="text-3xl font-bold mb-4">The End</h2>
+    <p class="text-purple-200 mb-6">You've completed this adventure!</p>
+    <div class="flex justify-center space-x-4">
+      <button
+        id="play-again-btn"
+        class="bg-blue-500 hover:bg-blue-600 px-6 py-3 rounded-xl font-bold transition-all"
+      >
+        🔄 Play Again
+      </button>
+      <a
+        href="/stories"
+        class="bg-purple-500 hover:bg-purple-600 px-6 py-3 rounded-xl font-bold transition-all"
+      >
+        📚 More Stories
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block extra_scripts %}
+<script>
+  const storyId = {{ story.id }};
+  let currentScene = null;
+  const totalScenes = {{ story.n_scenes }};
+  let currentChoiceLoadingText = "Loading your story...";
+
+  // Elements
+  const loadingScene = document.getElementById('loading-scene');
+  const sceneContent = document.getElementById('scene-content');
+  const choiceLoading = document.getElementById('choice-loading');
+  const sceneText = document.getElementById('scene-text');
+  const choicesContainer = document.getElementById('choices-container');
+  const storyEnd = document.getElementById('story-end');
+  const loadingText = document.getElementById('loading-text');
+
+  // Initialize story
+  async function initStory() {
+      const savedProgress = StoryProgress.load(storyId);
+
+      if (savedProgress && confirm('Continue from where you left off?')) {
+          await loadScene(storyId, savedProgress.choiceId);
+      } else {
+          StoryProgress.clear(storyId);
+          await loadScene(storyId, null);
+      }
+  }
+
+  // Load scene
+  async function loadScene(storyId, choiceId = null) {
+      // Use the current choice's loading text, or default for initial load
+      const displayText = choiceId ? currentChoiceLoadingText : "Starting your adventure...";
+      showLoading(displayText);
+
+      try {
+          const url = choiceId
+              ? `/api/stories/${storyId}/scene?choice_id=${choiceId}`
+              : `/api/stories/${storyId}/scene`;
+
+          const response = await fetch(url);
+          const scene = await response.json();
+
+          currentScene = scene;
+          displayScene(scene);
+
+          // Save progress
+          StoryProgress.save(storyId, scene.id, choiceId);
+
+      } catch (error) {
+          console.error('Error loading scene:', error);
+          showError('Failed to load scene. Please try again.');
+      }
+  }
+
+  // Display scene
+  function displayScene(scene) {
+      hideLoading();
+
+      // Animate scene text
+      sceneText.innerHTML = scene.text;
+      sceneText.classList.add('animate-slide-up');
+
+      // Clear previous choices
+      choicesContainer.innerHTML = '';
+
+      // Check if story is complete
+      if (!scene.choices || scene.choices.length === 0) {
+          showStoryEnd();
+          return;
+      }
+
+      // Display choices with delay for dramatic effect
+      scene.choices.forEach((choice, index) => {
+          setTimeout(() => {
+              const choiceBtn = createChoiceButton(choice);
+              choicesContainer.appendChild(choiceBtn);
+          }, (index + 1) * 200);
+      });
+  }
+
+  // Create choice button
+  function createChoiceButton(choice) {
+      const btn = document.createElement('button');
+      const isFinale = choice.next_scene_id === null;
+      const buttonClass = isFinale
+          ? 'w-full bg-gradient-to-r from-purple-600 to-pink-600 p-4 rounded-xl text-left hover:scale-105 transition-all animate-slide-up border-2 border-purple-400'
+          : 'w-full dark-glass p-4 rounded-xl text-left hover:scale-105 transition-all animate-slide-up';
+
+      btn.className = buttonClass;
+      btn.innerHTML = `
+          <div class="flex items-start space-x-3">
+              <span class="text-2xl">${isFinale ? '🏁' : '🎯'}</span>
+              <div class="flex-1">
+                  <span>${choice.text}</span>
+                  ${isFinale ? '<div class="text-sm text-purple-200 mt-1">Complete the story</div>' : ''}
+              </div>
+          </div>
+      `;
+
+      btn.addEventListener('click', () => makeChoice(choice));
+      return btn;
+  }
+
+  // Make choice
+  async function makeChoice(choice) {
+      // Store the loading text for this choice
+      currentChoiceLoadingText = choice.loading_text;
+
+      // Check if this is a final choice (story ending)
+      if (choice.next_scene_id === null) {
+          showStoryEnd(choice.loading_text);
+          return;
+      }
+
+      // Show loading with choice's loading text
+      showChoiceLoading(choice.loading_text);
+
+      // Add small delay for better UX
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Load next scene
+      await loadScene(storyId, choice.id);
+  }
+
+  // Show loading states
+  function showLoading(text = "Loading your story...") {
+      loadingScene.classList.remove('hidden');
+      sceneContent.classList.add('hidden');
+      choiceLoading.classList.add('hidden');
+      storyEnd.classList.add('hidden');
+
+      // Update loading text
+      const loadingTextEl = loadingScene.querySelector('p');
+      if (loadingTextEl) {
+          loadingTextEl.textContent = text;
+      }
+  }
+
+  function showChoiceLoading(text = 'Thinking...') {
+      loadingScene.classList.add('hidden');
+      sceneContent.classList.add('hidden');
+      choiceLoading.classList.remove('hidden');
+      storyEnd.classList.add('hidden');
+      loadingText.textContent = text;
+  }
+
+  function hideLoading() {
+      loadingScene.classList.add('hidden');
+      sceneContent.classList.remove('hidden');
+      choiceLoading.classList.add('hidden');
+      storyEnd.classList.add('hidden');
+  }
+
+  function showStoryEnd(finalChoiceText = null) {
+      loadingScene.classList.add('hidden');
+      sceneContent.classList.add('hidden');
+      choiceLoading.classList.add('hidden');
+      storyEnd.classList.remove('hidden');
+
+      // If we have final choice text, show it briefly before the end screen
+      if (finalChoiceText) {
+          const finalTextEl = document.createElement('div');
+          finalTextEl.className = 'text-center py-8 mb-6 glass rounded-xl';
+          finalTextEl.innerHTML = `
+              <div class="text-3xl mb-4">✨</div>
+              <p class="text-lg italic text-purple-200">"${finalChoiceText}"</p>
+          `;
+          storyEnd.insertBefore(finalTextEl, storyEnd.firstChild);
+      }
+
+      // Clear progress
+      StoryProgress.clear(storyId);
+  }
+
+  function showError(message) {
+      sceneText.innerHTML = `
+          <div class="text-center py-8">
+              <div class="text-4xl mb-4">😞</div>
+              <p class="text-xl mb-4">${message}</p>
+              <button onclick="location.reload()" class="bg-blue-500 hover:bg-blue-600 px-6 py-3 rounded-xl">
+                  🔄 Retry
+              </button>
+          </div>
+      `;
+      hideLoading();
+  }
+
+  // Update progress bar
+  function updateProgress(percent = null) {
+      // Progress bar removed - function kept for compatibility
+  }
+
+  // Event listeners
+  document.getElementById('restart-btn').addEventListener('click', () => {
+      if (confirm('Are you sure you want to restart? You will lose your current progress.')) {
+          StoryProgress.clear(storyId);
+          location.reload();
+      }
+  });
+
+  document.getElementById('play-again-btn').addEventListener('click', () => {
+      StoryProgress.clear(storyId);
+      location.reload();
+  });
+
+  // Initialize when page loads
+  document.addEventListener('DOMContentLoaded', initStory);
+</script>
+{% endblock %}

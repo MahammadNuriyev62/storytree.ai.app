@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>
+      {% block title %}ParallelStory - Interactive Adventures{% endblock %}
+    </title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/static/style.css" />
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            animation: {
+              "fade-in": "fadeIn 0.5s ease-in-out",
+              "slide-up": "slideUp 0.6s ease-out",
+              float: "float 3s ease-in-out infinite",
+              "pulse-slow": "pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+            },
+            keyframes: {
+              fadeIn: {
+                "0%": { opacity: "0" },
+                "100%": { opacity: "1" },
+              },
+              slideUp: {
+                "0%": { transform: "translateY(20px)", opacity: "0" },
+                "100%": { transform: "translateY(0)", opacity: "1" },
+              },
+              float: {
+                "0%, 100%": { transform: "translateY(0px)" },
+                "50%": { transform: "translateY(-10px)" },
+              },
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      .gradient-bg {
+        background: linear-gradient(-45deg, #1a0b3d, #2a1449, #1f0f36, #2d1b3e);
+        background-size: 400% 400%;
+        animation: gradient 15s ease infinite;
+      }
+
+      @keyframes gradient {
+        0% {
+          background-position: 0% 50%;
+        }
+        50% {
+          background-position: 100% 50%;
+        }
+        100% {
+          background-position: 0% 50%;
+        }
+      }
+
+      .glass {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+
+      .dark-glass {
+        background: rgba(0, 0, 0, 0.3);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+    </style>
+    {% block extra_head %}{% endblock %}
+  </head>
+  <body class="min-h-screen gradient-bg text-white">
+    <!-- Navigation -->
+    <nav class="glass p-4 m-4 rounded-2xl">
+      <div class="container mx-auto flex items-center justify-between">
+        <a
+          href="/"
+          class="text-2xl font-bold hover:scale-105 transition-transform"
+        >
+          📚 ParallelStory
+        </a>
+        <div class="flex space-x-6">
+          <a href="/" class="hover:text-purple-200 transition-colors"
+            >🏠 Home</a
+          >
+          <a href="/stories" class="hover:text-purple-200 transition-colors"
+            >📖 Stories</a
+          >
+          <a href="/create" class="hover:text-purple-200 transition-colors"
+            >✨ Create</a
+          >
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-8">
+      {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="text-center p-8 text-purple-200">
+      <p>✨ Made with magic and code 🪄</p>
+    </footer>
+
+    <script>
+      // Progress management
+      class StoryProgress {
+        static save(storyId, sceneId, choiceId = null) {
+          const progress = {
+            sceneId: sceneId,
+            choiceId: choiceId,
+            timestamp: new Date().toISOString(),
+          };
+          localStorage.setItem(`story_${storyId}`, JSON.stringify(progress));
+        }
+
+        static load(storyId) {
+          const saved = localStorage.getItem(`story_${storyId}`);
+          return saved ? JSON.parse(saved) : null;
+        }
+
+        static clear(storyId) {
+          localStorage.removeItem(`story_${storyId}`);
+        }
+      }
+
+      // Global story progress manager
+      window.StoryProgress = StoryProgress;
+    </script>
+
+    {% block extra_scripts %}{% endblock %}
+  </body>
+</html>

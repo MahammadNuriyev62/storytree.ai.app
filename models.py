@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 from pydantic import BaseModel, Field
 
 from db_models import Character
@@ -37,7 +37,7 @@ class ChoiceDto(BaseModel):
         description="Text to display while the next scene is being generated.",
         default="Generating next scene...",
     )
-    next_scene_id: int = Field(
+    next_scene_id: Optional[int] = Field(
         description="The ID of the next scene that will be shown if this choice is selected.",
         ge=1,
     )
@@ -65,6 +65,11 @@ class StoryDto(BaseModel):
     id: int
     title: str
     description: str
+    emojis: List[str] = Field(
+        description="A list of emojis representing the story.",
+        default_factory=list,
+        examples=[["🌴", "🗿", "🔍"]],
+    )
 
 
 class StoriesDto(BaseModel):
@@ -94,6 +99,11 @@ class StoryDetailsDto(StoryDto):
                 },
             ]
         ],
+    )
+    emojis: List[str] = Field(
+        description="A list of emojis representing the story.",
+        default_factory=list,
+        examples=[["🌴", "🗿", "🔍"]],
     )
     main_characters: List[Character] = Field(
         description="A list of main characters in the story.",

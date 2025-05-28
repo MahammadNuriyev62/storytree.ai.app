@@ -1,0 +1,85 @@
+{% extends "base.html" %} {% block title %}Stories - ParallelStory{% endblock %}
+{% block content %}
+<div class="text-center mb-12">
+  <h1 class="text-5xl font-bold mb-4 animate-slide-up">📚 Story Library</h1>
+  <p class="text-xl text-purple-200 animate-fade-in">
+    Choose your next adventure
+  </p>
+</div>
+
+{% if stories %}
+<div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+  {% for story in stories %}
+  <div
+    class="glass p-6 rounded-2xl hover:scale-105 transition-all cursor-pointer group"
+    onclick="window.location.href='/stories/{{ story.id }}'"
+  >
+    <!-- Story Icon -->
+    <div class="text-4xl mb-4 group-hover:animate-bounce">
+      {% if story.emojis %} {% for emoji in story.emojis[:3] %}{{ emoji }}{%
+      endfor %} {% else %} 📖 {% endif %}
+    </div>
+
+    <!-- Story Title -->
+    <h3
+      class="text-xl font-bold mb-3 group-hover:text-purple-200 transition-colors"
+    >
+      {{ story.title }}
+    </h3>
+
+    <!-- Story Description -->
+    <p class="text-purple-200 mb-4 line-clamp-3">{{ story.description }}</p>
+
+    <!-- Story Status -->
+    <div class="flex items-center justify-between">
+      <div class="flex items-center space-x-2" id="status-{{ story.id }}">
+        <span class="text-sm text-purple-300">📊 New Story</span>
+      </div>
+
+      <div class="text-sm text-purple-300">{{ story.n_scenes }} scenes</div>
+    </div>
+
+    <!-- Continue/Start Button -->
+    <div class="mt-4 pt-4 border-t border-white/20">
+      <button
+        class="w-full dark-glass py-2 rounded-xl hover:bg-white/20 transition-colors font-semibold"
+        id="btn-{{ story.id }}"
+      >
+        🎮 Start Adventure
+      </button>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="text-center glass p-12 rounded-2xl">
+  <div class="text-6xl mb-4">📖</div>
+  <h2 class="text-2xl font-bold mb-4">No Stories Yet</h2>
+  <p class="text-purple-200 mb-6">
+    Be the first to create an amazing adventure!
+  </p>
+  <a
+    href="/create"
+    class="dark-glass px-8 py-4 rounded-2xl hover:scale-105 transition-all font-semibold"
+  >
+    ✨ Create First Story
+  </a>
+</div>
+{% endif %} {% endblock %} {% block extra_scripts %}
+<script>
+  // Load progress for each story
+  document.addEventListener('DOMContentLoaded', function() {
+      {% for story in stories %}
+      const progress{{ story.id }} = StoryProgress.load({{ story.id }});
+      const btn{{ story.id }} = document.getElementById('btn-{{ story.id }}');
+      const status{{ story.id }} = document.getElementById('status-{{ story.id }}');
+
+      if(progress{{ story.id }}) {
+          btn{{ story.id }}.innerHTML = '▶️ Continue';
+          btn{{ story.id }}.classList.add('bg-green-500/20', 'border-green-400');
+          status{{ story.id }}.innerHTML = '<span class="text-sm text-green-300">📖 Already Started</span>';
+      }
+      {% endfor %}
+  });
+</script>
+{% endblock %}

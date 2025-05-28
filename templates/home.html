@@ -1,0 +1,90 @@
+{% extends "base.html" %} {% block title %}ParallelStory - Your Adventure
+Awaits{% endblock %} {% block content %}
+<!-- Hero Section -->
+<div class="text-center mb-16">
+  <h1 class="text-6xl font-bold mb-6 animate-slide-up">
+    <span class="animate-float inline-block">🎭</span>
+    Your Story
+    <span class="animate-float inline-block" style="animation-delay: 0.5s"
+      >📖</span
+    >
+    Your Choice
+  </h1>
+
+  <!-- Rotating Captions -->
+  <div
+    class="text-2xl mb-8 animate-fade-in"
+    id="caption-container"
+    style="min-height: 2.5rem"
+  >
+    <p id="rotating-caption" class="transition-all duration-500">
+      {{ captions[0] }}
+    </p>
+  </div>
+
+  <!-- CTA Buttons -->
+  <div class="flex justify-center space-x-6 mb-12">
+    <a
+      href="/stories"
+      class="glass px-8 py-4 rounded-2xl hover:scale-105 transition-all font-semibold text-xl"
+    >
+      🚀 Start Adventure
+    </a>
+    <a
+      href="/create"
+      class="dark-glass px-8 py-4 rounded-2xl hover:scale-105 transition-all font-semibold text-xl"
+    >
+      ✨ Create Story
+    </a>
+  </div>
+</div>
+
+<!-- Features Grid -->
+<div class="grid md:grid-cols-3 gap-8 mb-16">
+  <div class="glass p-8 rounded-2xl text-center">
+    <div class="text-4xl mb-4">🎲</div>
+    <h3 class="text-xl font-bold mb-3">Endless Choices</h3>
+    <p class="text-purple-200">Every decision shapes your unique story path</p>
+  </div>
+
+  <div class="glass p-8 rounded-2xl text-center">
+    <div class="text-4xl mb-4">🌍</div>
+    <h3 class="text-xl font-bold mb-3">Rich Worlds</h3>
+    <p class="text-purple-200">Immerse yourself in AI-generated adventures</p>
+  </div>
+
+  <div class="glass p-8 rounded-2xl text-center">
+    <div class="text-4xl mb-4">🔄</div>
+    <h3 class="text-xl font-bold mb-3">Replay Value</h3>
+    <p class="text-purple-200">Discover new paths with every playthrough</p>
+  </div>
+</div>
+
+<!-- Highlights -->
+<div class="glass p-8 rounded-2xl">
+  <h2 class="text-3xl font-bold mb-6 text-center">✨ What's New</h2>
+  <div class="space-y-4">
+    {% for highlight in highlights %}
+    <div class="dark-glass p-4 rounded-xl">{{ highlight }}</div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %} {% block extra_scripts %}
+<script>
+  // Rotating captions
+  const captions = {{ captions | tojson }};
+  let currentIndex = 0;
+  const captionElement = document.getElementById('rotating-caption');
+
+  function rotateCaption() {
+      captionElement.style.opacity = '0';
+      setTimeout(() => {
+          currentIndex = (currentIndex + 1) % captions.length;
+          captionElement.textContent = captions[currentIndex];
+          captionElement.style.opacity = '1';
+      }, 250);
+  }
+
+  setInterval(rotateCaption, 3000);
+</script>
+{% endblock %}

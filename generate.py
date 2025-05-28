@@ -52,6 +52,7 @@ story_example = {
             "description": "A fearsome creature that guards the entrance to Atlantis. It is ancient and powerful, with a deep connection to the ocean.",
         },
     ],
+    "emojis": ["🌊", "🐠", "🏴‍☠"],
     "worldview": {
         "setting": "The story takes place in the depths of the ocean, where Iroh discovers an ancient civilization and meets interesting creatures.",
         "timePeriod": "Modern day",

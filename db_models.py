@@ -20,6 +20,7 @@ class Character(BaseModel):
 class Story(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     description: str
+    emojis: List[str] = Field(sa_column=Column(JSON))
     user_given_description: str
     title: str
     themes: List[str] = Field(sa_column=Column(JSON))
@@ -73,6 +74,7 @@ class Choice(SQLModel, table=True):
     next_scene_id: Optional[int] = Field(
         default=None,
         foreign_key="scene.id",
+        nullable=True,
         index=True,  # <-- ensure we index this column!
     )
     # This Choice leads to one next_scene. Uses next_scene_id.

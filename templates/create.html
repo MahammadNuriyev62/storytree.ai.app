@@ -1,0 +1,341 @@
+{% extends "base.html" %} {% block title %}Create Story - ParallelStory{%
+endblock %} {% block content %}
+<div class="max-w-3xl mx-auto">
+  <div class="text-center mb-8">
+    <h1 class="text-5xl font-bold mb-4 animate-slide-up">
+      ✨ Create Your Story
+    </h1>
+    <p class="text-xl text-purple-200 animate-fade-in">
+      Bring your imagination to life with AI-powered storytelling
+    </p>
+  </div>
+
+  <!-- Quick Start -->
+  <div class="glass p-6 rounded-2xl mb-8">
+    <h2 class="text-2xl font-bold mb-4">🚀 Quick Start</h2>
+    <div class="grid md:grid-cols-2 gap-4">
+      <button
+        id="quick-generate"
+        class="dark-glass p-4 rounded-xl hover:scale-105 transition-all"
+      >
+        <div class="text-3xl mb-2">🎲</div>
+        <h3 class="font-bold mb-2">Random Story</h3>
+        <p class="text-sm text-purple-200">
+          Let AI create a surprise adventure
+        </p>
+      </button>
+      <button
+        id="quick-template"
+        class="dark-glass p-4 rounded-xl hover:scale-105 transition-all"
+      >
+        <div class="text-3xl mb-2">📋</div>
+        <h3 class="font-bold mb-2">From Template</h3>
+        <p class="text-sm text-purple-200">Choose from popular story types</p>
+      </button>
+    </div>
+  </div>
+
+  <!-- Manual Creation Form -->
+  <form id="story-form" class="glass p-8 rounded-2xl">
+    <h2 class="text-2xl font-bold mb-6">📝 Custom Story</h2>
+
+    <!-- Story Description -->
+    <div class="mb-6">
+      <label class="block text-lg font-semibold mb-3">Story Concept</label>
+      <textarea
+        id="description"
+        name="description"
+        class="w-full p-4 rounded-xl bg-white/10 border border-white/20 focus:border-purple-400 focus:outline-none resize-none"
+        rows="4"
+        placeholder="Describe your story idea... What's the setting? Who are the main characters? What's the central conflict or adventure?"
+        required
+      ></textarea>
+      <p class="text-sm text-purple-300 mt-2">
+        💡 Be descriptive! The more details you provide, the richer your story
+        will be.
+      </p>
+    </div>
+
+    <!-- Story Length -->
+    <div class="mb-6">
+      <label class="block text-lg font-semibold mb-3">Story Length</label>
+      <div class="grid grid-cols-3 gap-4">
+        <label class="cursor-pointer">
+          <input type="radio" name="n_scenes" value="25" class="sr-only peer" />
+          <div
+            class="dark-glass p-4 rounded-xl text-center peer-checked:bg-purple-500/30 peer-checked:border-purple-400 border border-transparent transition-all"
+          >
+            <div class="text-2xl mb-2">⚡</div>
+            <div class="font-bold">Short</div>
+            <div class="text-sm text-purple-200">25 scenes</div>
+            <div class="text-xs text-purple-300">~45 min</div>
+          </div>
+        </label>
+        <label class="cursor-pointer">
+          <input
+            type="radio"
+            name="n_scenes"
+            value="50"
+            checked
+            class="sr-only peer"
+          />
+          <div
+            class="dark-glass p-4 rounded-xl text-center peer-checked:bg-purple-500/30 peer-checked:border-purple-400 border border-transparent transition-all"
+          >
+            <div class="text-2xl mb-2">📖</div>
+            <div class="font-bold">Medium</div>
+            <div class="text-sm text-purple-200">50 scenes</div>
+            <div class="text-xs text-purple-300">~90 min</div>
+          </div>
+        </label>
+        <label class="cursor-pointer">
+          <input
+            type="radio"
+            name="n_scenes"
+            value="100"
+            class="sr-only peer"
+          />
+          <div
+            class="dark-glass p-4 rounded-xl text-center peer-checked:bg-purple-500/30 peer-checked:border-purple-400 border border-transparent transition-all"
+          >
+            <div class="text-2xl mb-2">📚</div>
+            <div class="font-bold">Epic</div>
+            <div class="text-sm text-purple-200">100 scenes</div>
+            <div class="text-xs text-purple-300">~3 hours</div>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <!-- Choice Weights -->
+    <div class="mb-8">
+      <label class="block text-lg font-semibold mb-3"
+        >Choice Distribution</label
+      >
+      <p class="text-sm text-purple-300 mb-4">
+        How many choices should typically appear in each scene?
+      </p>
+      <div class="space-y-3">
+        <div
+          class="flex items-center justify-between dark-glass p-3 rounded-xl"
+        >
+          <span>Single Choice (1 option)</span>
+          <input
+            type="range"
+            id="weight-1"
+            min="0"
+            max="100"
+            value="70"
+            class="w-24"
+          />
+          <span id="weight-1-val" class="w-12 text-center">70%</span>
+        </div>
+        <div
+          class="flex items-center justify-between dark-glass p-3 rounded-xl"
+        >
+          <span>Two Choices (2 options)</span>
+          <input
+            type="range"
+            id="weight-2"
+            min="0"
+            max="100"
+            value="20"
+            class="w-24"
+          />
+          <span id="weight-2-val" class="w-12 text-center">20%</span>
+        </div>
+        <div
+          class="flex items-center justify-between dark-glass p-3 rounded-xl"
+        >
+          <span>Multiple Choices (3+ options)</span>
+          <input
+            type="range"
+            id="weight-3"
+            min="0"
+            max="100"
+            value="10"
+            class="w-24"
+          />
+          <span id="weight-3-val" class="w-12 text-center">10%</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Generate Button -->
+    <button
+      type="submit"
+      id="generate-btn"
+      class="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 py-4 rounded-xl font-bold text-xl transition-all hover:scale-105"
+    >
+      <span id="generate-text">🎭 Generate Story</span>
+      <span id="generate-loading" class="hidden">✨ Creating Magic...</span>
+    </button>
+  </form>
+
+  <!-- Generation Progress -->
+  <div
+    id="generation-progress"
+    class="hidden glass p-8 rounded-2xl mt-8 text-center"
+  >
+    <div class="text-4xl mb-4 animate-spin">🎨</div>
+    <h3 class="text-2xl font-bold mb-4">Crafting Your Adventure</h3>
+    <div class="w-full bg-white/20 rounded-full h-3 mb-4">
+      <div
+        id="progress-bar"
+        class="bg-gradient-to-r from-purple-500 to-pink-500 h-3 rounded-full transition-all duration-1000"
+        style="width: 0%"
+      ></div>
+    </div>
+    <p id="progress-text" class="text-purple-200">
+      Initializing story generator...
+    </p>
+  </div>
+</div>
+{% endblock %} {% block extra_scripts %}
+<script>
+  // Progress steps
+  const progressSteps = [
+    { percent: 20, text: "🧠 Analyzing your concept..." },
+    { percent: 40, text: "👥 Creating characters..." },
+    { percent: 60, text: "🌍 Building the world..." },
+    { percent: 80, text: "📝 Writing the opening scene..." },
+    { percent: 100, text: "✨ Adding final touches..." },
+  ];
+
+  // Weight sliders
+  const weight1 = document.getElementById("weight-1");
+  const weight2 = document.getElementById("weight-2");
+  const weight3 = document.getElementById("weight-3");
+  const weight1Val = document.getElementById("weight-1-val");
+  const weight2Val = document.getElementById("weight-2-val");
+  const weight3Val = document.getElementById("weight-3-val");
+
+  // Update weight displays and normalize
+  function updateWeights() {
+    const total =
+      parseInt(weight1.value) +
+      parseInt(weight2.value) +
+      parseInt(weight3.value);
+    if (total > 0) {
+      const w1 = Math.round((parseInt(weight1.value) / total) * 100);
+      const w2 = Math.round((parseInt(weight2.value) / total) * 100);
+      const w3 = 100 - w1 - w2;
+
+      weight1Val.textContent = w1 + "%";
+      weight2Val.textContent = w2 + "%";
+      weight3Val.textContent = w3 + "%";
+    }
+  }
+
+  weight1.addEventListener("input", updateWeights);
+  weight2.addEventListener("input", updateWeights);
+  weight3.addEventListener("input", updateWeights);
+
+  // Quick actions
+  document
+    .getElementById("quick-generate")
+    .addEventListener("click", async () => {
+      const response = await fetch("/api/stories/description");
+      const data = await response.json();
+      document.getElementById("description").value = data.description;
+    });
+
+  document.getElementById("quick-template").addEventListener("click", () => {
+    const templates = [
+      "A brave knight must rescue a princess from a dragon's tower, but discovers the dragon is actually protecting her from something far worse.",
+      "In a cyberpunk future, a hacker discovers a conspiracy that goes to the very top of the corporate hierarchy and must decide whether to expose it or profit from it.",
+      "A detective investigating a series of mysterious disappearances realizes the victims are all connected to an ancient curse that threatens the entire city.",
+      "An astronaut crash-lands on an alien planet and must survive while uncovering the secrets of a lost civilization.",
+    ];
+    const randomTemplate =
+      templates[Math.floor(Math.random() * templates.length)];
+    document.getElementById("description").value = randomTemplate;
+  });
+
+  // Form submission
+  document
+    .getElementById("story-form")
+    .addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const formData = new FormData(e.target);
+      const description = formData.get("description");
+      const nScenes = parseInt(formData.get("n_scenes"));
+
+      // Calculate normalized weights
+      const w1 = parseInt(weight1.value);
+      const w2 = parseInt(weight2.value);
+      const w3 = parseInt(weight3.value);
+      const total = w1 + w2 + w3;
+
+      const choicesWeights = [
+        [1, w1 / total],
+        [2, w2 / total],
+        [3, w3 / total],
+      ];
+
+      const payload = {
+        description: description,
+        n_scenes: nScenes,
+        choices_weights: choicesWeights,
+      };
+
+      // Show progress
+      showGenerationProgress();
+
+      try {
+        const response = await fetch("/api/stories", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        });
+
+        if (response.ok) {
+          const story = await response.json();
+          // Redirect to the new story
+          window.location.href = `/stories/${story.id}`;
+        } else {
+          throw new Error("Failed to create story");
+        }
+      } catch (error) {
+        console.error("Error creating story:", error);
+        hideGenerationProgress();
+        alert("Failed to create story. Please try again.");
+      }
+    });
+
+  function showGenerationProgress() {
+    document.getElementById("story-form").style.display = "none";
+    document.getElementById("generation-progress").classList.remove("hidden");
+
+    let currentStep = 0;
+    const progressBar = document.getElementById("progress-bar");
+    const progressText = document.getElementById("progress-text");
+
+    function updateStep() {
+      if (currentStep < progressSteps.length) {
+        const step = progressSteps[currentStep];
+        progressBar.style.width = step.percent + "%";
+        progressText.textContent = step.text;
+        currentStep++;
+
+        if (currentStep < progressSteps.length) {
+          setTimeout(updateStep, 2000);
+        }
+      }
+    }
+
+    setTimeout(updateStep, 500);
+  }
+
+  function hideGenerationProgress() {
+    document.getElementById("story-form").style.display = "block";
+    document.getElementById("generation-progress").classList.add("hidden");
+  }
+
+  // Initialize weights
+  updateWeights();
+</script>
+{% endblock %}

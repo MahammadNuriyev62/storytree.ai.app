@@ -1,0 +1,176 @@
+{% extends "base.html" %} {% block title %}{{ story.title }} - ParallelStory{%
+endblock %} {% block content %}
+<div class="max-w-4xl mx-auto">
+  <!-- Back Button -->
+  <div class="mb-6">
+    <a
+      href="/stories"
+      class="glass px-4 py-2 rounded-xl hover:scale-105 transition-all"
+    >
+      ← Back to Stories
+    </a>
+  </div>
+
+  <!-- Story Header -->
+  <div class="glass p-8 rounded-2xl mb-8 text-center">
+    <div class="text-6xl mb-4">
+      {% if story.emojis %} {% for emoji in story.emojis %}{{ emoji }}{% endfor
+      %} {% else %} 📖 {% endif %}
+    </div>
+    <h1 class="text-4xl font-bold mb-4">{{ story.title }}</h1>
+    <p class="text-xl text-purple-200 mb-6">{{ story.description }}</p>
+
+    <!-- Progress & Action Buttons -->
+    <div class="flex justify-center space-x-4 mb-6">
+      <button
+        id="start-btn"
+        class="dark-glass hover:bg-white/10 px-8 py-3 rounded-xl font-bold text-lg transition-all"
+      >
+        🎮 Start New Game
+      </button>
+      <button
+        id="continue-btn"
+        class="dark-glass hover:bg-white/10 px-8 py-3 rounded-xl font-bold text-lg transition-all hidden"
+      >
+        ▶️ Continue Story
+      </button>
+    </div>
+
+    <!-- Progress Bar -->
+    <div
+      class="flex items-center justify-center space-x-3"
+      id="progress-section"
+      style="display: none"
+    >
+      <span class="text-sm">Story:</span>
+      <span id="progress-text" class="text-sm text-green-300"
+        >Already Started</span
+      >
+    </div>
+  </div>
+
+  <!-- Story Details -->
+  <div class="grid md:grid-cols-2 gap-8">
+    <!-- Characters -->
+    <div class="glass p-6 rounded-2xl">
+      <h2 class="text-2xl font-bold mb-4">👥 Characters</h2>
+      {% if story.characters %}
+      <div class="space-y-4">
+        {% for character in story.characters %}
+        <div class="dark-glass p-4 rounded-xl">
+          <h3 class="font-bold text-lg">{{ character.name }}</h3>
+          <p class="text-purple-200 text-sm mb-2">{{ character.role }}</p>
+          <p class="text-sm">{{ character.description }}</p>
+          {% if character.traits %}
+          <div class="flex flex-wrap gap-2 mt-2">
+            {% for trait in character.traits %}
+            <span class="bg-purple-500/30 px-2 py-1 rounded-full text-xs"
+              >{{ trait }}</span
+            >
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="text-purple-200">Characters will be revealed as you play</p>
+      {% endif %}
+    </div>
+
+    <!-- Story Info -->
+    <div class="space-y-6">
+      <!-- Themes -->
+      <div class="glass p-6 rounded-2xl">
+        <h2 class="text-2xl font-bold mb-4">🎭 Themes</h2>
+        {% if story.themes %}
+        <div class="flex flex-wrap gap-2">
+          {% for theme in story.themes %}
+          <span class="dark-glass px-3 py-1 rounded-full text-sm font-semibold">
+            {{ theme }}
+          </span>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-purple-200">Themes will emerge through your choices</p>
+        {% endif %}
+      </div>
+
+      <!-- World -->
+      <div class="glass p-6 rounded-2xl">
+        <h2 class="text-2xl font-bold mb-4">🌍 World</h2>
+        {% if story.worldview %}
+        <div class="space-y-3">
+          {% if story.worldview.setting %}
+          <div>
+            <span class="font-semibold">Setting:</span>
+            <p class="text-purple-200">{{ story.worldview.setting }}</p>
+          </div>
+          {% endif %} {% if story.worldview.timePeriod %}
+          <div>
+            <span class="font-semibold">Time Period:</span>
+            <p class="text-purple-200">{{ story.worldview.timePeriod }}</p>
+          </div>
+          {% endif %}
+        </div>
+        {% else %}
+        <p class="text-purple-200">The world awaits your discovery</p>
+        {% endif %}
+      </div>
+
+      <!-- Stats -->
+      <div class="glass p-6 rounded-2xl">
+        <h2 class="text-2xl font-bold mb-4">📊 Story Stats</h2>
+        <div class="space-y-2">
+          <div class="flex justify-between">
+            <span>Total Scenes:</span>
+            <span class="font-bold">{{ story.n_scenes }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span>Estimated Time:</span>
+            <span class="font-bold"
+              >{{ (story.n_scenes * 2) // 60 }}h {{ (story.n_scenes * 2) % 60
+              }}m</span
+            >
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block extra_scripts %}
+<script>
+  const storyId = {{ story.id }};
+  const startBtn = document.getElementById('start-btn');
+  const continueBtn = document.getElementById('continue-btn');
+  const progressSection = document.getElementById('progress-section');
+  const progressBar = document.getElementById('progress-bar');
+  const progressText = document.getElementById('progress-text');
+
+  // Check for existing progress
+  const savedProgress = StoryProgress.load(storyId);
+
+  if (savedProgress) {
+      continueBtn.classList.remove('hidden');
+      progressSection.style.display = 'flex';
+
+      // Show already started status
+      progressText.textContent = 'Already Started';
+  }
+
+  startBtn.addEventListener('click', function() {
+      if (savedProgress) {
+          if (confirm('This will start a new game and lose your current progress. Continue?')) {
+              StoryProgress.clear(storyId);
+              window.location.href = `/stories/${storyId}/play`;
+          }
+      } else {
+          window.location.href = `/stories/${storyId}/play`;
+      }
+  });
+
+  continueBtn.addEventListener('click', function() {
+      window.location.href = `/stories/${storyId}/play`;
+  });
+</script>
+{% endblock %}
