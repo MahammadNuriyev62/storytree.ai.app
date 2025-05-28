@@ -60,4 +60,7 @@ A user-friendly web interface allows players to interact with the stories:
 - **▶️ `/stories/{story_id}/play`:** The main gameplay screen, displaying the current scene text and available choices.
 - **✨ `/create`:** An intuitive form for users to define their own story concepts and parameters.
 
+## Deployment (TODO)
+TODO
+
 StoryTree.ai offers a framework for exploring the potential of LLMs in creating deeply engaging, user-driven interactive fiction. 🌟
