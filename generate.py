@@ -224,12 +224,19 @@ async def continue_story_branch(
 
     response = await chatbot.prompt(messages)
 
-    response = response.replace("<think>\n\n</think>\n\n", "").strip()
-
-    try:
-        return json.loads(response)
-    except json.JSONDecodeError:
+    for _ in range(10):
+        response = response.replace("<think>\n\n</think>\n\n", "").strip()
         try:
-            return dict(response)
-        except ValueError:
-            return response
+            return json.loads(response)
+        except json.JSONDecodeError as e:
+            messages.append({"role": "assistant", "content": response})
+            messages.append(
+                {
+                    "role": "user",
+                    "content": (
+                        f"The json you output is invalid. \n{e}\n Retry!\n"
+                        '{"text": "<scene description>", "choices": [{"text": "<choice description>", "loading_text": "<your thoughts>"}, ...]}'
+                    ),
+                }
+            )
+            response = await chatbot.prompt(messages)
