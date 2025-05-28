@@ -9,7 +9,7 @@ from generate import (
     generate_story_metadata,
 )
 from db_models import Story, Scene, Choice, engine
-from models import CreateStory, SceneDto
+from models import CreateStory, SceneDto, StoriesDto, StoryDetailsDto
 from initialize import init_db
 
 
@@ -188,3 +188,22 @@ async def get_story(story_id: int, choice_id: Optional[int] = None):
 
         _ = scene.choices
         return scene
+
+
+@app.get("/stories", response_model=StoriesDto)
+async def get_stories():
+    """Get all stories."""
+    with Session(engine) as session:
+        stmt = select(Story)
+        stories = session.exec(stmt).all()
+        return {"stories": stories}
+
+
+@app.get("/stories/{story_id}", response_model=StoryDetailsDto)
+async def get_story_by_id(story_id: int):
+    """Get a story by its ID."""
+    with Session(engine) as session:
+        story = session.get(Story, story_id)
+        if not story:
+            raise ValueError(f"Story with id={story_id!r} not found")
+        return story

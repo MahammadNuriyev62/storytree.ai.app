@@ -1,6 +1,8 @@
 from typing import List, Tuple
 from pydantic import BaseModel, Field
 
+from db_models import Character
+
 
 class CreateStory(BaseModel):
     choices_weights: List[Tuple[int, float]] = Field(
@@ -57,3 +59,78 @@ class SceneDto(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+class StoryDto(BaseModel):
+    id: int
+    title: str
+    description: str
+
+
+class StoriesDto(BaseModel):
+    stories: List[StoryDto] = Field(
+        description="A list of stories.",
+        default_factory=list,
+    )
+
+
+class StoryDetailsDto(StoryDto):
+    characters: List[Character] = Field(
+        description="A list of characters in the story.",
+        default_factory=list,
+        examples=[
+            [
+                {
+                    "name": "Aria",
+                    "role": "Protagonist",
+                    "traits": ["brave", "curious"],
+                    "description": "A young archaeologist with a passion for uncovering ancient secrets.",
+                },
+                {
+                    "name": "Liam",
+                    "role": "Antagonist",
+                    "traits": ["cunning", "ruthless"],
+                    "description": "A rival archaeologist who will stop at nothing to claim the artifact for himself.",
+                },
+            ]
+        ],
+    )
+    main_characters: List[Character] = Field(
+        description="A list of main characters in the story.",
+        default_factory=list,
+        examples=[
+            [
+                {
+                    "name": "Aria",
+                    "role": "Protagonist",
+                    "traits": ["brave", "curious"],
+                    "description": "A young archaeologist with a passion for uncovering ancient secrets.",
+                }
+            ]
+        ],
+    )
+    worldview: dict = Field(
+        description="The worldview of the story, including its setting and rules.",
+        default_factory=dict,
+        examples=[
+            {
+                "setting": "A forgotten jungle filled with ancient ruins and hidden dangers.",
+                "timePeriod": "Modern day",
+                "technologyLevel": "Advanced technology for exploration, but the civilization is ancient.",
+                "magicSystem": "The jungle has its own magic, with creatures and phenomena that defy explanation.",
+            }
+        ],
+    )
+    themes: List[str] = Field(
+        description="The themes explored in the story.",
+        default_factory=list,
+        examples=[
+            ["Exploration", "Adventure", "Discovery", "Mystery", "Transformation"],
+        ],
+    )
+    n_scenes: int = Field(
+        description="The total number of scenes in the story.",
+        ge=1,
+        default=50,
+        examples=[50, 100, 200],
+    )
