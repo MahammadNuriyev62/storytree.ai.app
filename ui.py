@@ -25,7 +25,7 @@ async def home(request: Request):
         "🔥 Every choice matters.",
     ]
     highlights = [
-        "🔥 Trending: Lost Temple of Zandar",
+        # "🔥 Trending: Lost Temple of Zandar",
         "💡 Tip: Revisit and reshape your story endings!",
         "🎉 Community: Share your favorite paths.",
     ]
