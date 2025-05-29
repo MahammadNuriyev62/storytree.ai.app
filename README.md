@@ -61,6 +61,35 @@ A user-friendly web interface allows players to interact with the stories:
 - **✨ `/create`:** An intuitive form for users to define their own story concepts and parameters.
 
 ## Deployment (TODO)
+
+### Manually
+
+To run StoryTree.ai locally, clone the repository and follow these steps:
+
+1. Make sure you have ollama and qwen3 4B installed
+
+```bash
+curl -fsSL https://ollama.com/install.sh | sh # Linux
+```
+
+```bash
+ollama pull qwen3:4b
+```
+
+2. Install the required Python packages:
+
+```bash
+pip install -r requirements.txt
+```
+
+3. Start the FastAPI server:
+
+```bash
+uvicorn main:app --reload
+```
+
+### Docker
+
 TODO
 
 StoryTree.ai offers a framework for exploring the potential of LLMs in creating deeply engaging, user-driven interactive fiction. 🌟
