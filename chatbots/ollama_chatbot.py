@@ -13,4 +13,8 @@ class ChatBot:
             model=self.model_name,
             messages=messages,
         )
-        return response["message"]["content"]
+        return (
+            response["message"]["content"]
+            .replace("<think>\n\n</think>\n\n", "")
+            .strip()
+        )

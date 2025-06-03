@@ -1,7 +1,7 @@
 import json
 import random
 from typing import List
-from chatbot import ChatBot
+from chatbots.chatbot import ChatBot
 from db_models import Choice, Scene, Story
 
 
@@ -20,7 +20,7 @@ async def generate_description(chatbot: ChatBot):
             },
         ]
     )
-    return description.replace("<think>\n\n</think>\n\n", "").strip()
+    return description
 
 
 story_example = {
@@ -89,7 +89,7 @@ async def generate_story_metadata(chatbot: ChatBot, description: str):
         ]
     )
 
-    story_metadata = response.replace("<think>\n\n</think>\n\n", "").strip()
+    story_metadata = response
 
     try:
         return json.loads(story_metadata)
@@ -225,7 +225,6 @@ async def continue_story_branch(
     response = await chatbot.prompt(messages)
 
     for _ in range(10):
-        response = response.replace("<think>\n\n</think>\n\n", "").strip()
         try:
             return json.loads(response)
         except json.JSONDecodeError as e:

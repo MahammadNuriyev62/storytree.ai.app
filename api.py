@@ -1,7 +1,7 @@
-from typing import List, Optional, Tuple, cast
+from typing import Any, List, Optional, Tuple, cast
 from fastapi import APIRouter
 from sqlmodel import Session, select, exists
-from chatbot import ChatBot
+from chatbots.chatbot import ChatBot
 from generate import (
     continue_story_branch,
     generate_description,
@@ -10,7 +10,7 @@ from generate import (
 from db_models import Story, Scene, Choice, engine
 from models import CreateStory, SceneDto, StoriesDto, StoryDetailsDto
 
-light_weight_chatbot = ChatBot(model_name="qwen3:4b")
+light_weight_chatbot = ChatBot()
 
 router = APIRouter()
 
@@ -23,7 +23,7 @@ async def generate_story_description():
 
 @router.post("/stories", response_model_by_alias=False)
 async def create_story(data: CreateStory):
-    story_metadata = await generate_story_metadata(
+    story_metadata: Any = await generate_story_metadata(
         light_weight_chatbot,
         data.description,
     )
