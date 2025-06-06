@@ -23,9 +23,11 @@ async def generate_description(chatbot: ChatBot):
     return description
 
 
+description = "In the darkest depths of the ocean, Iroh the Diver stumbles upon the ruins of a long-lost civilization and unearths secrets guarded for millennia. Joined by his loyal friend Taro, mythical beings, and a legendary captain, he must navigate ancient magic, monstrous guardians, and mysterious alliances to uncover the truth of Atlantis."
+
 story_example = {
     "title": "Deep under ocean",
-    "description": "Story about a deep-sea diver who discovers an ancient civilization and meets interesting creatures.",
+    "description": "Story about a deep-sea diver and his trusted friend who discover an ancient civilization and meet interesting creatures.",
     "main_character": {
         "name": "Iroh the Diver",
         "role": "Diver",
@@ -50,6 +52,12 @@ story_example = {
             "role": "Guardian of Atlantis",
             "traits": ["fearsome", "ancient", "powerful", "dangerous"],
             "description": "A fearsome creature that guards the entrance to Atlantis. It is ancient and powerful, with a deep connection to the ocean.",
+        },
+        {
+            "name": "Taro",
+            "role": "Iroh's Friend and Navigator",
+            "traits": ["loyal", "resourceful", "playful"],
+            "description": "A fellow diver and longtime friend of Iroh. He navigates treacherous currents with ease and lightens tense moments with his humor, always ready to support Iroh in every challenge.",
         },
     ],
     "emojis": ["🌊", "🐠", "🏴‍☠"],
@@ -79,12 +87,13 @@ async def generate_story_metadata(chatbot: ChatBot, description: str):
             },
             {
                 "role": "user",
-                "content": "Output the complete json (ONLY JSON) for interactive story quest with the following description: In the darkest depths of the ocean, Iroh the Diver stumbles upon the ruins of a long-lost civilization and unearths secrets guarded for millennia. Joined by mythical beings and a legendary captain, he must navigate ancient magic, monstrous guardians, and mysterious alliances to uncover the truth of Atlantis.",
+                "content": f"Output the complete json (ONLY JSON) for interactive story quest with the following description: {description}",
             },
             {"role": "assistant", "content": json.dumps(story_example)},
             {
                 "role": "user",
-                "content": f"Output the complete json for interactive story quest with the following description: {description}",
+                "content": f"Output the complete json (ONLY JSON) for interactive story quest with the following description: {description}. "
+                "(include the same fields as previously, but matching the new description)",
             },
         ]
     )
