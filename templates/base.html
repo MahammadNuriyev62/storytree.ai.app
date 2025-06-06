@@ -106,9 +106,8 @@
     <script>
       // Progress management
       class StoryProgress {
-        static save(storyId, sceneId, choiceId = null) {
+        static save(storyId, choiceId = null) {
           const progress = {
-            sceneId: sceneId,
             choiceId: choiceId,
             timestamp: new Date().toISOString(),
           };
