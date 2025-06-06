@@ -43,6 +43,7 @@ async def create_story(data: CreateStory):
             user_given_description=data.description,
             n_scenes=data.n_scenes,
             emojis=story_metadata["emojis"],
+            difficulty=data.difficulty,
         )
         session.add(story)
         session.commit()
@@ -137,7 +138,7 @@ async def get_story(story_id: int, choice_id: Optional[int] = None):
 
         story = scene.story
 
-        new_scene_json = await continue_story_branch(
+        new_scene_json, is_branch_over = await continue_story_branch(
             light_weight_chatbot,
             story=story,
             scenes=scenes,
@@ -151,7 +152,7 @@ async def get_story(story_id: int, choice_id: Optional[int] = None):
 
         next_scene_ids: List[Optional[int]] = []
         # Check if we are at the second to last scene
-        if len(scenes) >= story.n_scenes - 1:
+        if is_branch_over:
             next_scene_ids = [None] * len(new_scene_json["choices"])
         else:
             child_scenes = [Scene(story_id=story_id) for _ in new_scene_json["choices"]]
@@ -168,6 +169,7 @@ async def get_story(story_id: int, choice_id: Optional[int] = None):
                 loading_text=choice_json.get("loading_text", "Thinking... 🤔"),
                 scene_id=scene_id,
                 next_scene_id=next_scene_id,
+                is_wrong=choice_json.get("is_wrong", False),
             )
             new_choices.append(new_choice)
         session.add_all(new_choices)

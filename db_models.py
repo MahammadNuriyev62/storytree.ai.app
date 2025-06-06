@@ -33,6 +33,7 @@ class Story(SQLModel, table=True):
         back_populates="story",
     )
     n_scenes: int = Field(ge=1)
+    difficulty: float = Field(default=0.2, ge=0, le=1)
 
 
 class Scene(SQLModel, table=True):
@@ -82,6 +83,7 @@ class Choice(SQLModel, table=True):
         back_populates="parent_choice",
         sa_relationship_kwargs={"foreign_keys": "[Choice.next_scene_id]"},
     )
+    is_wrong: bool = Field(default=False, nullable=False)
 
 
 sqlite_file_name = "database.db"

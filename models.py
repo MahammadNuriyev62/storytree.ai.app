@@ -22,6 +22,13 @@ class CreateStory(BaseModel):
         ge=1,
         description="Length of the story in scenes. Must be at least 1.",
     )
+    difficulty: float = Field(
+        default=0.2,
+        ge=0,
+        le=1,
+        description="Difficulty of the story, ranging from 0 to 1. "
+        "A higher value indicates a more challenging story.",
+    )
 
 
 class ChoiceDto(BaseModel):
