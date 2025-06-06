@@ -11,36 +11,49 @@ block content %}
 <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
   {% for story in stories %}
   <div
-    class="glass p-6 rounded-2xl hover:scale-105 transition-all cursor-pointer group"
+    class="glass p-6 rounded-2xl hover:scale-105 transition-all cursor-pointer group relative flex flex-col h-full"
     onclick="window.location.href='/stories/{{ story.id }}'"
   >
-    <!-- Story Icon -->
-    <div class="text-4xl mb-4 group-hover:animate-bounce">
-      {% if story.emojis %} {% for emoji in story.emojis[:3] %}{{ emoji }}{%
-      endfor %} {% else %} 📖 {% endif %}
+    <!-- Difficulty Badge - Top Right -->
+    <div class="absolute top-4 right-4">
+      <div
+        id="difficulty-{{ story.id }}"
+        class="px-2 py-1 rounded-full text-xs font-bold border"
+      >
+        <!-- Difficulty will be set by JavaScript -->
+      </div>
     </div>
 
-    <!-- Story Title -->
-    <h3
-      class="text-xl font-bold mb-3 group-hover:text-purple-200 transition-colors"
-    >
-      {{ story.title }}
-    </h3>
-
-    <!-- Story Description -->
-    <p class="text-purple-200 mb-4 line-clamp-3">{{ story.description }}</p>
-
-    <!-- Story Status -->
-    <div class="flex items-center justify-between">
-      <div class="flex items-center space-x-2" id="status-{{ story.id }}">
-        <span class="text-sm text-purple-300">📊 New Story</span>
+    <!-- Story Content (grows to fill space) -->
+    <div class="flex-grow">
+      <!-- Story Icon -->
+      <div class="text-4xl mb-4 group-hover:animate-bounce">
+        {% if story.emojis %} {% for emoji in story.emojis[:3] %}{{ emoji }}{%
+        endfor %} {% else %} 📖 {% endif %}
       </div>
 
-      <div class="text-sm text-purple-300">{{ story.n_scenes }} scenes</div>
+      <!-- Story Title -->
+      <h3
+        class="text-xl font-bold mb-3 group-hover:text-purple-200 transition-colors pr-16"
+      >
+        {{ story.title }}
+      </h3>
+
+      <!-- Story Description -->
+      <p class="text-purple-200 mb-4 line-clamp-3">{{ story.description }}</p>
+
+      <!-- Story Status -->
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center space-x-2" id="status-{{ story.id }}">
+          <span class="text-sm text-purple-300">📊 New Story</span>
+        </div>
+
+        <div class="text-sm text-purple-300">{{ story.n_scenes }} scenes</div>
+      </div>
     </div>
 
-    <!-- Continue/Start Button -->
-    <div class="mt-4 pt-4 border-t border-white/20">
+    <!-- Continue/Start Button (sticks to bottom) -->
+    <div class="border-t border-white/20 pt-4">
       <button
         class="w-full dark-glass py-2 rounded-xl hover:bg-white/20 transition-colors font-semibold"
         id="btn-{{ story.id }}"
@@ -67,9 +80,46 @@ block content %}
 </div>
 {% endif %} {% endblock %} {% block extra_scripts %}
 <script>
-  // Load progress for each story
+  // Convert numerical difficulty to display values
+  function getDifficultyInfo(difficulty) {
+    if (difficulty <= 0.15) {
+      return {
+        text: "Easy",
+        icon: "🟢",
+        color: "bg-green-500/30 text-green-300 border-green-400"
+      };
+    } else if (difficulty <= 0.4) {
+      return {
+        text: "Medium",
+        icon: "🟡",
+        color: "bg-yellow-500/30 text-yellow-300 border-yellow-400"
+      };
+    } else if (difficulty <= 0.7) {
+      return {
+        text: "Hard",
+        icon: "🔴",
+        color: "bg-red-500/30 text-red-300 border-red-400"
+      };
+    } else {
+      return {
+        text: "Nightmare",
+        icon: "💀",
+        color: "bg-purple-500/30 text-purple-300 border-purple-400"
+      };
+    }
+  }
+
+  // Load progress for each story and set difficulty badges
   document.addEventListener('DOMContentLoaded', function() {
       {% for story in stories %}
+      // Set difficulty badge
+      const difficulty{{ story.id }} = {{ story.difficulty }};
+      const difficultyInfo{{ story.id }} = getDifficultyInfo(difficulty{{ story.id }});
+      const difficultyBadge{{ story.id }} = document.getElementById('difficulty-{{ story.id }}');
+      difficultyBadge{{ story.id }}.textContent = `${difficultyInfo{{ story.id }}.icon} ${difficultyInfo{{ story.id }}.text}`;
+      difficultyBadge{{ story.id }}.className = `px-3 py-1 rounded-full text-xs font-bold border ${difficultyInfo{{ story.id }}.color}`;
+
+      // Load progress
       const progress{{ story.id }} = StoryProgress.load({{ story.id }});
       const btn{{ story.id }} = document.getElementById('btn-{{ story.id }}');
       const status{{ story.id }} = document.getElementById('status-{{ story.id }}');

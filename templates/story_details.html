@@ -12,7 +12,17 @@ endblock %} {% block content %}
   </div>
 
   <!-- Story Header -->
-  <div class="glass p-8 rounded-2xl mb-8 text-center">
+  <div class="glass p-8 rounded-2xl mb-8 text-center relative">
+    <!-- Difficulty Badge - Top Right -->
+    <div class="absolute top-4 right-4">
+      <div
+        id="difficulty-badge"
+        class="px-3 py-2 rounded-full font-bold text-sm border"
+      >
+        <!-- Difficulty will be set by JavaScript -->
+      </div>
+    </div>
+
     <div class="text-6xl mb-4">
       {% if story.emojis %} {% for emoji in story.emojis %}{{ emoji }}{% endfor
       %} {% else %} 📖 {% endif %}
@@ -51,9 +61,40 @@ endblock %} {% block content %}
 
   <!-- Story Details -->
   <div class="grid md:grid-cols-2 gap-8">
-    <!-- Characters -->
+    <!-- Main Characters -->
     <div class="glass p-6 rounded-2xl">
-      <h2 class="text-2xl font-bold mb-4">👥 Characters</h2>
+      <h2 class="text-2xl font-bold mb-4">⭐ Main Characters</h2>
+      {% if story.main_characters %}
+      <div class="space-y-4">
+        {% for character in story.main_characters %}
+        <div class="dark-glass p-4 rounded-xl border-2 border-yellow-400/30">
+          <h3 class="font-bold text-lg text-yellow-300">
+            {{ character.name }}
+          </h3>
+          <p class="text-purple-200 text-sm mb-2">{{ character.role }}</p>
+          <p class="text-sm">{{ character.description }}</p>
+          {% if character.traits %}
+          <div class="flex flex-wrap gap-2 mt-2">
+            {% for trait in character.traits %}
+            <span class="bg-yellow-500/30 px-2 py-1 rounded-full text-xs"
+              >{{ trait }}</span
+            >
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="text-purple-200">
+        Main characters will be revealed as you play
+      </p>
+      {% endif %}
+    </div>
+
+    <!-- All Characters -->
+    <div class="glass p-6 rounded-2xl">
+      <h2 class="text-2xl font-bold mb-4">👥 All Characters</h2>
       {% if story.characters %}
       <div class="space-y-4">
         {% for character in story.characters %}
@@ -77,63 +118,64 @@ endblock %} {% block content %}
       <p class="text-purple-200">Characters will be revealed as you play</p>
       {% endif %}
     </div>
+  </div>
 
-    <!-- Story Info -->
-    <div class="space-y-6">
-      <!-- Themes -->
-      <div class="glass p-6 rounded-2xl">
-        <h2 class="text-2xl font-bold mb-4">🎭 Themes</h2>
-        {% if story.themes %}
-        <div class="flex flex-wrap gap-2">
-          {% for theme in story.themes %}
-          <span class="dark-glass px-3 py-1 rounded-full text-sm font-semibold">
-            {{ theme }}
-          </span>
-          {% endfor %}
+  <!-- Story Info Row -->
+  <div class="grid md:grid-cols-2 gap-8 mt-8">
+    <!-- Themes -->
+    <div class="glass p-6 rounded-2xl">
+      <h2 class="text-2xl font-bold mb-4">🎭 Themes</h2>
+      {% if story.themes %}
+      <div class="flex flex-wrap gap-2">
+        {% for theme in story.themes %}
+        <span class="dark-glass px-3 py-1 rounded-full text-sm font-semibold">
+          {{ theme }}
+        </span>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="text-purple-200">Themes will emerge through your choices</p>
+      {% endif %}
+    </div>
+
+    <!-- World -->
+    <div class="glass p-6 rounded-2xl">
+      <h2 class="text-2xl font-bold mb-4">🌍 World</h2>
+      {% if story.worldview %}
+      <div class="space-y-3">
+        {% if story.worldview.setting %}
+        <div>
+          <span class="font-semibold">Setting:</span>
+          <p class="text-purple-200">{{ story.worldview.setting }}</p>
         </div>
-        {% else %}
-        <p class="text-purple-200">Themes will emerge through your choices</p>
+        {% endif %} {% if story.worldview.timePeriod %}
+        <div>
+          <span class="font-semibold">Time Period:</span>
+          <p class="text-purple-200">{{ story.worldview.timePeriod }}</p>
+        </div>
         {% endif %}
       </div>
+      {% else %}
+      <p class="text-purple-200">The world awaits your discovery</p>
+      {% endif %}
+    </div>
+  </div>
 
-      <!-- World -->
-      <div class="glass p-6 rounded-2xl">
-        <h2 class="text-2xl font-bold mb-4">🌍 World</h2>
-        {% if story.worldview %}
-        <div class="space-y-3">
-          {% if story.worldview.setting %}
-          <div>
-            <span class="font-semibold">Setting:</span>
-            <p class="text-purple-200">{{ story.worldview.setting }}</p>
-          </div>
-          {% endif %} {% if story.worldview.timePeriod %}
-          <div>
-            <span class="font-semibold">Time Period:</span>
-            <p class="text-purple-200">{{ story.worldview.timePeriod }}</p>
-          </div>
-          {% endif %}
-        </div>
-        {% else %}
-        <p class="text-purple-200">The world awaits your discovery</p>
-        {% endif %}
+  <!-- Stats Row -->
+  <div class="glass p-6 rounded-2xl mt-8">
+    <h2 class="text-2xl font-bold mb-4">📊 Story Stats</h2>
+    <div class="grid md:grid-cols-2 gap-6">
+      <div class="text-center">
+        <div class="text-3xl mb-2">📖</div>
+        <div class="font-bold text-xl">{{ story.n_scenes }}</div>
+        <div class="text-sm text-purple-200">Total Scenes</div>
       </div>
-
-      <!-- Stats -->
-      <div class="glass p-6 rounded-2xl">
-        <h2 class="text-2xl font-bold mb-4">📊 Story Stats</h2>
-        <div class="space-y-2">
-          <div class="flex justify-between">
-            <span>Total Scenes:</span>
-            <span class="font-bold">{{ story.n_scenes }}</span>
-          </div>
-          <div class="flex justify-between">
-            <span>Estimated Time:</span>
-            <span class="font-bold"
-              >{{ (story.n_scenes * 2) // 60 }}h {{ (story.n_scenes * 2) % 60
-              }}m</span
-            >
-          </div>
+      <div class="text-center">
+        <div class="text-3xl mb-2">⏱️</div>
+        <div class="font-bold text-xl">
+          {{ (story.n_scenes * 2) // 60 }}h {{ (story.n_scenes * 2) % 60 }}m
         </div>
+        <div class="text-sm text-purple-200">Estimated Time</div>
       </div>
     </div>
   </div>
@@ -141,11 +183,53 @@ endblock %} {% block content %}
 {% endblock %} {% block extra_scripts %}
 <script>
   const storyId = {{ story.id }};
+  const storyDifficulty = {{ story.difficulty }};
   const startBtn = document.getElementById('start-btn');
   const continueBtn = document.getElementById('continue-btn');
   const progressSection = document.getElementById('progress-section');
   const progressBar = document.getElementById('progress-bar');
   const progressText = document.getElementById('progress-text');
+
+  // Convert numerical difficulty to display values
+  function getDifficultyInfo(difficulty) {
+    if (difficulty <= 0.15) {
+      return {
+        text: "Easy",
+        icon: "🟢",
+        color: "bg-green-500/30 text-green-300 border-green-400",
+        description: "Forgiving choices"
+      };
+    } else if (difficulty <= 0.4) {
+      return {
+        text: "Medium",
+        icon: "🟡",
+        color: "bg-yellow-500/30 text-yellow-300 border-yellow-400",
+        description: "Balanced challenge"
+      };
+    } else if (difficulty <= 0.7) {
+      return {
+        text: "Hard",
+        icon: "🔴",
+        color: "bg-red-500/30 text-red-300 border-red-400",
+        description: "Punishing mistakes"
+      };
+    } else {
+      return {
+        text: "Nightmare",
+        icon: "💀",
+        color: "bg-purple-500/30 text-purple-300 border-purple-400",
+        description: "Extreme challenge"
+      };
+    }
+  }
+
+  // Set difficulty display
+  const difficultyInfo = getDifficultyInfo(storyDifficulty);
+
+  // Update difficulty badge
+  const difficultyBadge = document.getElementById('difficulty-badge');
+  difficultyBadge.textContent = `${difficultyInfo.icon} ${difficultyInfo.text}`;
+  difficultyBadge.className = `px-3 py-2 rounded-full font-bold text-sm border ${difficultyInfo.color}`;
 
   // Check for existing progress
   const savedProgress = StoryProgress.load(storyId);
