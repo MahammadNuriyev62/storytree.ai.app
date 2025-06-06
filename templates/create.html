@@ -107,6 +107,77 @@
       </div>
     </div>
 
+    <!-- Difficulty Level -->
+    <div class="mb-6">
+      <label class="block text-lg font-semibold mb-3">Difficulty Level</label>
+      <p class="text-sm text-purple-300 mb-4">
+        How challenging should the story be for players?
+      </p>
+      <div class="grid grid-cols-4 gap-4">
+        <label class="cursor-pointer">
+          <input
+            type="radio"
+            name="difficulty"
+            value="easy"
+            class="sr-only peer"
+          />
+          <div
+            class="dark-glass p-4 rounded-xl text-center peer-checked:bg-green-500/30 peer-checked:border-green-400 border border-transparent transition-all"
+          >
+            <div class="text-2xl mb-2">🟢</div>
+            <div class="font-bold">Easy</div>
+            <div class="text-xs text-purple-300">Forgiving choices</div>
+          </div>
+        </label>
+        <label class="cursor-pointer">
+          <input
+            type="radio"
+            name="difficulty"
+            value="medium"
+            checked
+            class="sr-only peer"
+          />
+          <div
+            class="dark-glass p-4 rounded-xl text-center peer-checked:bg-yellow-500/30 peer-checked:border-yellow-400 border border-transparent transition-all"
+          >
+            <div class="text-2xl mb-2">🟡</div>
+            <div class="font-bold">Medium</div>
+            <div class="text-xs text-purple-300">Balanced challenge</div>
+          </div>
+        </label>
+        <label class="cursor-pointer">
+          <input
+            type="radio"
+            name="difficulty"
+            value="hard"
+            class="sr-only peer"
+          />
+          <div
+            class="dark-glass p-4 rounded-xl text-center peer-checked:bg-red-500/30 peer-checked:border-red-400 border border-transparent transition-all"
+          >
+            <div class="text-2xl mb-2">🔴</div>
+            <div class="font-bold">Hard</div>
+            <div class="text-xs text-purple-300">Punishing mistakes</div>
+          </div>
+        </label>
+        <label class="cursor-pointer">
+          <input
+            type="radio"
+            name="difficulty"
+            value="nightmare"
+            class="sr-only peer"
+          />
+          <div
+            class="dark-glass p-4 rounded-xl text-center peer-checked:bg-purple-500/30 peer-checked:border-purple-400 border border-transparent transition-all"
+          >
+            <div class="text-2xl mb-2">💀</div>
+            <div class="font-bold">Nightmare</div>
+            <div class="text-xs text-purple-300">Extreme challenge</div>
+          </div>
+        </label>
+      </div>
+    </div>
+
     <!-- Choice Weights -->
     <div class="mb-8">
       <label class="block text-lg font-semibold mb-3"
@@ -261,6 +332,16 @@
       const formData = new FormData(e.target);
       const description = formData.get("description");
       const nScenes = parseInt(formData.get("n_scenes"));
+      const difficultyString = formData.get("difficulty");
+
+      // Convert difficulty string to numerical value (0.0 to 1.0)
+      const difficultyMap = {
+        easy: 0.1, // 10% chance of wrong choices
+        medium: 0.3, // 30% chance of wrong choices
+        hard: 0.6, // 60% chance of wrong choices
+        nightmare: 0.9, // 90% chance of wrong choices
+      };
+      const difficulty = difficultyMap[difficultyString] || 0.3;
 
       // Calculate normalized weights
       const w1 = parseInt(weight1.value);
@@ -277,6 +358,7 @@
       const payload = {
         description: description,
         n_scenes: nScenes,
+        difficulty: difficulty,
         choices_weights: choicesWeights,
       };
 
