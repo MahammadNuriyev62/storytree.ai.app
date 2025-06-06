@@ -4,7 +4,7 @@ from typing import Optional
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
-from sqlmodel import Session, select
+from sqlmodel import Session, select, desc
 
 from db_models import Story, engine
 
@@ -37,9 +37,9 @@ async def home(request: Request):
 
 @router.get("/stories", response_class=HTMLResponse)
 async def list_stories(request: Request):
-    """Grid of all stories."""
+    """Grid of all stories, newest first."""
     with Session(engine) as session:
-        stories = session.exec(select(Story)).all()
+        stories = session.exec(select(Story).order_by(desc(Story.id))).all()
     return templates.TemplateResponse(
         "stories.html",
         {"request": request, "stories": stories},
