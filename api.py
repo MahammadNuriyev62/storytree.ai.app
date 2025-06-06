@@ -11,6 +11,7 @@ from db_models import Story, Scene, Choice, engine
 from models import CreateStory, SceneDto, StoriesDto, StoryDetailsDto
 
 light_weight_chatbot = ChatBot()
+heavy_weight_chatbot = ChatBot(model_name="o4-mini")
 
 router = APIRouter()
 
@@ -24,7 +25,7 @@ async def generate_story_description():
 @router.post("/stories", response_model_by_alias=False)
 async def create_story(data: CreateStory):
     story_metadata: Any = await generate_story_metadata(
-        light_weight_chatbot,
+        heavy_weight_chatbot,
         data.description,
     )
     choices_weights = {
