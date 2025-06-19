@@ -28,12 +28,8 @@ async def create_story(data: CreateStory):
         heavy_weight_chatbot,
         data.description,
     )
-    choices_weights = {
-        **{k: v for k, v in data.choices_weights},
-    }
     with Session(engine) as session:
         story = Story(
-            choices_weights=choices_weights,  # Using string keys for JSON
             # root_scene=scene1 # Link the root scene
             title=story_metadata["title"],
             description=story_metadata["description"],

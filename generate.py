@@ -114,7 +114,7 @@ USER_FIRST_MESSAGE_TEMPLATE = (
 )
 USER_MESSAGE_TEMPLATE = (
     'Player proceeds with "{choice}". '
-    "Generate next scene ({n_scene}/{n_scene_total}) with {n_choices} ({n_wrong} of which are wrong) choice(s)! It should be from the perspective of the main character"
+    "Generate next scene ({n_scene}/{n_scene_total}) with 1,2 or 3 choices, some of which are wrong based on the difficulty level: {difficulty_level}! It should be from the perspective of the main character"
 )
 USER_FINAL_MESSAGE_TEMPLATE = (
     'Player proceeds with "{choice}". '
@@ -129,12 +129,22 @@ USER_FINAL_MESSAGE_DISASTER_TEMPLATE = (
 async def continue_story_branch(
     chatbot: ChatBot, story: Story, scenes: List[Scene], choices: List[Choice]
 ) -> Tuple[dict, bool]:
+    story_json = {
+        **story.model_dump(),
+        "difficulty": "easy"
+        if story.difficulty <= 0.2
+        else (
+            "medium"
+            if story.difficulty <= 0.4
+            else ("hard" if story.difficulty <= 0.8 else "impossible")
+        ),
+    }
     messages = [
         {
             "role": "system",
             "content": (
                 "You're best story teller. Given the story metadata:\n"
-                f"{story.model_dump()}\n\n(/no_think)\n"
+                f"{story_json}\n\n(/no_think)\n"
                 f"You will create a story with {story.n_scenes} scenes.\n"
                 "IMPORTANT: you output only valid json of the following format:\n"
                 '{"text": "<scene description>", "choices": [{"text": "<choice description>", "loading_text": "<your thoughts>"}, ...]}'
@@ -174,8 +184,7 @@ async def continue_story_branch(
                         choice=selected_choice.text,
                         n_scene=i + 1,
                         n_scene_total=story.n_scenes,
-                        n_choices=len(scene.choices),
-                        n_wrong=len([c for c in scene.choices if c.is_wrong]),
+                        difficulty_level=story_json["difficulty"],
                     ),
                 }
             )
@@ -235,16 +244,6 @@ async def continue_story_branch(
         )
     else:
         is_branch_over = False
-        n_choices = int(
-            random.choices(
-                list(story.choices_weights.keys()),
-                weights=list(story.choices_weights.values()),
-                k=1,
-            )[0]
-        )
-        n_wrong = len(
-            [random.random() < story.difficulty for _ in range(n_choices - 1)]
-        )
         messages.append(
             {
                 "role": "user",
@@ -252,8 +251,7 @@ async def continue_story_branch(
                     choice=selected_choice.text,
                     n_scene=len(_scenes),
                     n_scene_total=story.n_scenes,
-                    n_choices=n_choices,
-                    n_wrong=n_wrong,
+                    difficulty_level=story_json["difficulty"],
                 ),
             }
         )
