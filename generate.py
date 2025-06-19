@@ -23,7 +23,7 @@ async def generate_description(chatbot: ChatBot):
     return description
 
 
-description = "In the darkest depths of the ocean, Iroh the Diver stumbles upon the ruins of a long-lost civilization and unearths secrets guarded for millennia. Joined by his loyal friend Taro, mythical beings, and a legendary captain, he must navigate ancient magic, monstrous guardians, and mysterious alliances to uncover the truth of Atlantis."
+example_description = "In the darkest depths of the ocean, Iroh the Diver stumbles upon the ruins of a long-lost civilization and unearths secrets guarded for millennia. Joined by his loyal friend Taro, mythical beings, and a legendary captain, he must navigate ancient magic, monstrous guardians, and mysterious alliances to uncover the truth of Atlantis."
 
 story_example = {
     "title": "Deep under ocean",
@@ -87,7 +87,7 @@ async def generate_story_metadata(chatbot: ChatBot, description: str):
             },
             {
                 "role": "user",
-                "content": f"Output the complete json (ONLY JSON) for interactive story quest with the following description: {description}",
+                "content": f"Output the complete json (ONLY JSON) for interactive story quest with the following description: {example_description}.",
             },
             {"role": "assistant", "content": json.dumps(story_example)},
             {
@@ -114,7 +114,7 @@ USER_FIRST_MESSAGE_TEMPLATE = (
 )
 USER_MESSAGE_TEMPLATE = (
     'Player proceeds with "{choice}". '
-    "Generate next scene ({n_scene}/{n_scene_total}) with {n_choices} ({n_wrong} of which are wrong) choice(s)!"
+    "Generate next scene ({n_scene}/{n_scene_total}) with {n_choices} ({n_wrong} of which are wrong) choice(s)! It should be from the perspective of the main character"
 )
 USER_FINAL_MESSAGE_TEMPLATE = (
     'Player proceeds with "{choice}". '
@@ -122,7 +122,7 @@ USER_FINAL_MESSAGE_TEMPLATE = (
 )
 USER_FINAL_MESSAGE_DISASTER_TEMPLATE = (
     'Player proceeds with "{choice}". '
-    "Generate scene ({n_scene}/{n_scene_total}) which ends the story abruptly due to an unexpected disaster! Add 1 choice to end the story, something like 'The End' or 'Game Over'."
+    "Generate scene ({n_scene}/{n_scene_total}) that ends the story due to the wrong decision! Add 1 choice to end the story, something like 'The End' or 'Game Over'."
 )
 
 
