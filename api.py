@@ -167,6 +167,7 @@ async def get_story(story_id: int, choice_id: Optional[int] = None):
                 scene_id=scene_id,
                 next_scene_id=next_scene_id,
                 is_wrong=choice_json.get("is_wrong", False),
+                is_pre_final=choice_json.get("is_final", False),
             )
             new_choices.append(new_choice)
         session.add_all(new_choices)

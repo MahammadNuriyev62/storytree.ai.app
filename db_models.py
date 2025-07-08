@@ -83,6 +83,12 @@ class Choice(SQLModel, table=True):
         sa_relationship_kwargs={"foreign_keys": "[Choice.next_scene_id]"},
     )
     is_wrong: bool = Field(default=False, nullable=False)
+    is_pre_final: bool = Field(default=False)
+
+    @property
+    def is_terminal(self) -> bool:
+        """Check if this choice leads to a terminal scene (no next scene)."""
+        return self.next_scene_id is None
 
 
 sqlite_file_name = "database.db"
