@@ -27,7 +27,6 @@ class Story(SQLModel, table=True):
     main_characters: List[Character] = Field(sa_column=Column(JSON))
     characters: List[Character] = Field(sa_column=Column(JSON))
     worldview: Dict[str, str] = Field(sa_column=Column(JSON))
-    choices_weights: Dict[int, float] = Field(sa_column=Column(JSON))
 
     scenes: List["Scene"] = Relationship(
         back_populates="story",
@@ -84,6 +83,12 @@ class Choice(SQLModel, table=True):
         sa_relationship_kwargs={"foreign_keys": "[Choice.next_scene_id]"},
     )
     is_wrong: bool = Field(default=False, nullable=False)
+    is_pre_final: bool = Field(default=False)
+
+    @property
+    def is_terminal(self) -> bool:
+        """Check if this choice leads to a terminal scene (no next scene)."""
+        return self.next_scene_id is None
 
 
 sqlite_file_name = "database.db"

@@ -1,16 +1,10 @@
-from typing import List, Optional, Tuple
+from typing import List, Optional
 from pydantic import BaseModel, Field
 
 from db_models import Character
 
 
 class CreateStory(BaseModel):
-    choices_weights: List[Tuple[int, float]] = Field(
-        description="A dictionary mapping choice IDs to their probabilities. "
-        "The sum of all probabilities must be 1.0.",
-        default=[(3, 0.1), (2, 0.2), (1, 0.7)],
-        examples=[[(3, 0.1), (2, 0.4), (1, 0.5)]],
-    )
     description: str = Field(
         description="A brief description of the story. "
         "This will be used to generate the story metadata.",

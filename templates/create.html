@@ -178,60 +178,6 @@
       </div>
     </div>
 
-    <!-- Choice Weights -->
-    <div class="mb-8">
-      <label class="block text-lg font-semibold mb-3"
-        >Choice Distribution</label
-      >
-      <p class="text-sm text-purple-300 mb-4">
-        How many choices should typically appear in each scene?
-      </p>
-      <div class="space-y-3">
-        <div
-          class="flex items-center justify-between dark-glass p-3 rounded-xl"
-        >
-          <span>Single Choice (1 option)</span>
-          <input
-            type="range"
-            id="weight-1"
-            min="0"
-            max="100"
-            value="70"
-            class="w-24"
-          />
-          <span id="weight-1-val" class="w-12 text-center">70%</span>
-        </div>
-        <div
-          class="flex items-center justify-between dark-glass p-3 rounded-xl"
-        >
-          <span>Two Choices (2 options)</span>
-          <input
-            type="range"
-            id="weight-2"
-            min="0"
-            max="100"
-            value="20"
-            class="w-24"
-          />
-          <span id="weight-2-val" class="w-12 text-center">20%</span>
-        </div>
-        <div
-          class="flex items-center justify-between dark-glass p-3 rounded-xl"
-        >
-          <span>Multiple Choices (3+ options)</span>
-          <input
-            type="range"
-            id="weight-3"
-            min="0"
-            max="100"
-            value="10"
-            class="w-24"
-          />
-          <span id="weight-3-val" class="w-12 text-center">10%</span>
-        </div>
-      </div>
-    </div>
-
     <!-- Generate Button -->
     <button
       type="submit"
@@ -272,35 +218,6 @@
     { percent: 80, text: "📝 Writing the opening scene..." },
     { percent: 100, text: "✨ Adding final touches..." },
   ];
-
-  // Weight sliders
-  const weight1 = document.getElementById("weight-1");
-  const weight2 = document.getElementById("weight-2");
-  const weight3 = document.getElementById("weight-3");
-  const weight1Val = document.getElementById("weight-1-val");
-  const weight2Val = document.getElementById("weight-2-val");
-  const weight3Val = document.getElementById("weight-3-val");
-
-  // Update weight displays and normalize
-  function updateWeights() {
-    const total =
-      parseInt(weight1.value) +
-      parseInt(weight2.value) +
-      parseInt(weight3.value);
-    if (total > 0) {
-      const w1 = Math.round((parseInt(weight1.value) / total) * 100);
-      const w2 = Math.round((parseInt(weight2.value) / total) * 100);
-      const w3 = 100 - w1 - w2;
-
-      weight1Val.textContent = w1 + "%";
-      weight2Val.textContent = w2 + "%";
-      weight3Val.textContent = w3 + "%";
-    }
-  }
-
-  weight1.addEventListener("input", updateWeights);
-  weight2.addEventListener("input", updateWeights);
-  weight3.addEventListener("input", updateWeights);
 
   // Quick actions
   document
@@ -343,23 +260,10 @@
       };
       const difficulty = difficultyMap[difficultyString] || 0.3;
 
-      // Calculate normalized weights
-      const w1 = parseInt(weight1.value);
-      const w2 = parseInt(weight2.value);
-      const w3 = parseInt(weight3.value);
-      const total = w1 + w2 + w3;
-
-      const choicesWeights = [
-        [1, w1 / total],
-        [2, w2 / total],
-        [3, w3 / total],
-      ];
-
       const payload = {
         description: description,
         n_scenes: nScenes,
         difficulty: difficulty,
-        choices_weights: choicesWeights,
       };
 
       // Show progress
@@ -416,8 +320,5 @@
     document.getElementById("story-form").style.display = "block";
     document.getElementById("generation-progress").classList.add("hidden");
   }
-
-  // Initialize weights
-  updateWeights();
 </script>
 {% endblock %}

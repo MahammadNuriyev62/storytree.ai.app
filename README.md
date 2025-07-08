@@ -29,7 +29,7 @@ StoryTree.ai is built with a modern, efficient technology stack:
 The core functionality is exposed via a set of RESTful API endpoints:
 
 1.  **`POST /stories`**: ✍️ **Create a New Story**
-    - Accepts a user-provided `description`, desired `n_scenes`, and `choices_weights` (probabilities for 1, 2, or 3+ choices per scene).
+    - Accepts a user-provided `description`, desired `n_scenes` (approximate).
     - Leverages the LLM to generate comprehensive story `metadata` (title, description, characters, themes, worldview, emojis).
     - Generates the `first_introduction_scene` along with its initial choice (Acts as a one-shot prompt for the LLM to generate proceeding scenes).
     - Persists the initial story structure and root scene to the database.
