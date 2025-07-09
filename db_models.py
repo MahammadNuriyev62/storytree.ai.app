@@ -5,6 +5,8 @@ from sqlalchemy import create_engine
 from sqlmodel import Field, Relationship, SQLModel, Column
 from sqlalchemy.types import JSON
 
+from config import settings
+
 
 # --- Pydantic BaseModel for JSON data ---
 class Character(BaseModel):
@@ -91,7 +93,7 @@ class Choice(SQLModel, table=True):
         return self.next_scene_id is None
 
 
-sqlite_file_name = "database.db"
+sqlite_file_name = settings.db_name
 sqlite_url = f"sqlite:///{sqlite_file_name}"
 
 engine = create_engine(sqlite_url, echo=True)
