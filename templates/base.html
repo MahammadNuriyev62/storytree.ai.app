@@ -109,39 +109,85 @@
   </head>
   <body class="min-h-screen gradient-bg text-white">
     <!-- Navigation -->
-    <nav class="glass p-4 m-4 rounded-2xl">
-      <div class="container mx-auto flex items-center justify-between">
-        <a
-          href="/"
-          class="text-2xl font-bold hover:scale-105 transition-transform"
-        >
-          📚 StoryTree 🌳
-        </a>
-        <div class="flex space-x-6">
-          <a href="/" class="hover:text-purple-200 transition-colors"
-            >🏠 Home</a
+    <nav class="glass p-4 m-2 sm:m-4 rounded-2xl">
+      <div class="container mx-auto">
+        <!-- Mobile Navigation -->
+        <div class="flex items-center justify-between md:hidden">
+          <a
+            href="/"
+            class="text-xl sm:text-2xl font-bold hover:scale-105 transition-transform"
           >
-          <a href="/stories" class="hover:text-purple-200 transition-colors"
-            >📖 Stories</a
+            📚 StoryTree 🌳
+          </a>
+          <button id="mobile-menu-button" class="text-2xl">☰</button>
+        </div>
+
+        <!-- Desktop Navigation -->
+        <div class="hidden md:flex items-center justify-between">
+          <a
+            href="/"
+            class="text-2xl font-bold hover:scale-105 transition-transform"
           >
-          <a href="/create" class="hover:text-purple-200 transition-colors"
-            >✨ Create</a
-          >
+            📚 StoryTree 🌳
+          </a>
+          <div class="flex space-x-6">
+            <a href="/" class="hover:text-purple-200 transition-colors"
+              >🏠 Home</a
+            >
+            <a href="/stories" class="hover:text-purple-200 transition-colors"
+              >📖 Stories</a
+            >
+            <a href="/create" class="hover:text-purple-200 transition-colors"
+              >✨ Create</a
+            >
+          </div>
+        </div>
+
+        <!-- Mobile Menu Dropdown -->
+        <div id="mobile-menu" class="hidden mt-4 md:hidden">
+          <div class="flex flex-col space-y-3">
+            <a href="/" class="hover:text-purple-200 transition-colors py-2"
+              >🏠 Home</a
+            >
+            <a
+              href="/stories"
+              class="hover:text-purple-200 transition-colors py-2"
+              >📖 Stories</a
+            >
+            <a
+              href="/create"
+              class="hover:text-purple-200 transition-colors py-2"
+              >✨ Create</a
+            >
+          </div>
         </div>
       </div>
     </nav>
 
     <!-- Main Content -->
-    <main class="container mx-auto px-4 py-8">
+    <main class="container mx-auto px-2 sm:px-4 py-4 sm:py-8">
       {% block content %}{% endblock %}
     </main>
 
     <!-- Footer -->
-    <footer class="text-center p-8 text-purple-200">
-      <p>✨ Made with magic and code 🪄</p>
+    <footer class="text-center p-4 sm:p-8 text-purple-200">
+      <p class="text-sm sm:text-base">✨ Made with magic and code 🪄</p>
     </footer>
 
     <script>
+      // Mobile menu toggle
+      const mobileMenuButton = document.getElementById("mobile-menu-button");
+      const mobileMenu = document.getElementById("mobile-menu");
+
+      if (mobileMenuButton && mobileMenu) {
+        mobileMenuButton.addEventListener("click", () => {
+          mobileMenu.classList.toggle("hidden");
+          mobileMenuButton.textContent = mobileMenu.classList.contains("hidden")
+            ? "☰"
+            : "✕";
+        });
+      }
+
       // Progress management
       class StoryProgress {
         static save(storyId, choiceId = null) {

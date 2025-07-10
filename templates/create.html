@@ -1,26 +1,28 @@
 {% extends "base.html" %} {% block title %}Create Story - StoryTree{% endblock
 %} {% block content %}
 <div class="max-w-3xl mx-auto">
-  <div class="text-center mb-8">
-    <h1 class="text-5xl font-bold mb-4 animate-slide-up">
+  <div class="text-center mb-6 sm:mb-8">
+    <h1
+      class="text-3xl sm:text-4xl md:text-5xl font-bold mb-3 sm:mb-4 animate-slide-up"
+    >
       ✨ Create Your Story
     </h1>
-    <p class="text-xl text-purple-200 animate-fade-in">
+    <p class="text-lg sm:text-xl text-purple-200 animate-fade-in px-4">
       Bring your imagination to life with AI-powered storytelling
     </p>
   </div>
 
   <!-- Quick Start -->
-  <div class="glass p-6 rounded-2xl mb-8">
-    <h2 class="text-2xl font-bold mb-4">🚀 Quick Start</h2>
-    <div class="grid md:grid-cols-2 gap-4">
+  <div class="glass p-4 sm:p-6 rounded-2xl mb-6 sm:mb-8">
+    <h2 class="text-xl sm:text-2xl font-bold mb-4">🚀 Quick Start</h2>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <button
         id="quick-generate"
         class="dark-glass p-4 rounded-xl hover:scale-105 transition-all"
       >
-        <div class="text-3xl mb-2">🎲</div>
+        <div class="text-2xl sm:text-3xl mb-2">🎲</div>
         <h3 class="font-bold mb-2">Random Story</h3>
-        <p class="text-sm text-purple-200">
+        <p class="text-xs sm:text-sm text-purple-200">
           Let AI create a surprise adventure
         </p>
       </button>
@@ -28,29 +30,33 @@
         id="quick-template"
         class="dark-glass p-4 rounded-xl hover:scale-105 transition-all"
       >
-        <div class="text-3xl mb-2">📋</div>
+        <div class="text-2xl sm:text-3xl mb-2">📋</div>
         <h3 class="font-bold mb-2">From Template</h3>
-        <p class="text-sm text-purple-200">Choose from popular story types</p>
+        <p class="text-xs sm:text-sm text-purple-200">
+          Choose from popular story types
+        </p>
       </button>
     </div>
   </div>
 
   <!-- Manual Creation Form -->
-  <form id="story-form" class="glass p-8 rounded-2xl">
-    <h2 class="text-2xl font-bold mb-6">📝 Custom Story</h2>
+  <form id="story-form" class="glass p-4 sm:p-6 md:p-8 rounded-2xl">
+    <h2 class="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">📝 Custom Story</h2>
 
     <!-- Story Description -->
     <div class="mb-6">
-      <label class="block text-lg font-semibold mb-3">Story Concept</label>
+      <label class="block text-base sm:text-lg font-semibold mb-3"
+        >Story Concept</label
+      >
       <textarea
         id="description"
         name="description"
-        class="w-full p-4 rounded-xl bg-white/10 border border-white/20 focus:border-purple-400 focus:outline-none resize-none"
+        class="w-full p-3 sm:p-4 rounded-xl bg-white/10 border border-white/20 focus:border-purple-400 focus:outline-none resize-none text-sm sm:text-base"
         rows="4"
         placeholder="Describe your story idea... What's the setting? Who are the main characters? What's the central conflict or adventure?"
         required
       ></textarea>
-      <p class="text-sm text-purple-300 mt-2">
+      <p class="text-xs sm:text-sm text-purple-300 mt-2">
         💡 Be descriptive! The more details you provide, the richer your story
         will be.
       </p>
@@ -58,16 +64,18 @@
 
     <!-- Story Length -->
     <div class="mb-6">
-      <label class="block text-lg font-semibold mb-3">Story Length</label>
-      <div class="grid grid-cols-3 gap-4">
+      <label class="block text-base sm:text-lg font-semibold mb-3"
+        >Story Length</label
+      >
+      <div class="grid grid-cols-3 gap-2 sm:gap-4">
         <label class="cursor-pointer">
           <input type="radio" name="n_scenes" value="25" class="sr-only peer" />
           <div
-            class="dark-glass p-4 rounded-xl text-center peer-checked:bg-purple-500/30 peer-checked:border-purple-400 border border-transparent transition-all"
+            class="dark-glass p-3 sm:p-4 rounded-xl text-center peer-checked:bg-purple-500/30 peer-checked:border-purple-400 border border-transparent transition-all"
           >
-            <div class="text-2xl mb-2">⚡</div>
-            <div class="font-bold">Short</div>
-            <div class="text-sm text-purple-200">25 scenes</div>
+            <div class="text-xl sm:text-2xl mb-1 sm:mb-2">⚡</div>
+            <div class="font-bold text-sm sm:text-base">Short</div>
+            <div class="text-xs sm:text-sm text-purple-200">25 scenes</div>
             <div class="text-xs text-purple-300">~45 min</div>
           </div>
         </label>
@@ -80,11 +88,11 @@
             class="sr-only peer"
           />
           <div
-            class="dark-glass p-4 rounded-xl text-center peer-checked:bg-purple-500/30 peer-checked:border-purple-400 border border-transparent transition-all"
+            class="dark-glass p-3 sm:p-4 rounded-xl text-center peer-checked:bg-purple-500/30 peer-checked:border-purple-400 border border-transparent transition-all"
           >
-            <div class="text-2xl mb-2">📖</div>
-            <div class="font-bold">Medium</div>
-            <div class="text-sm text-purple-200">50 scenes</div>
+            <div class="text-xl sm:text-2xl mb-1 sm:mb-2">📖</div>
+            <div class="font-bold text-sm sm:text-base">Medium</div>
+            <div class="text-xs sm:text-sm text-purple-200">50 scenes</div>
             <div class="text-xs text-purple-300">~90 min</div>
           </div>
         </label>
@@ -96,11 +104,11 @@
             class="sr-only peer"
           />
           <div
-            class="dark-glass p-4 rounded-xl text-center peer-checked:bg-purple-500/30 peer-checked:border-purple-400 border border-transparent transition-all"
+            class="dark-glass p-3 sm:p-4 rounded-xl text-center peer-checked:bg-purple-500/30 peer-checked:border-purple-400 border border-transparent transition-all"
           >
-            <div class="text-2xl mb-2">📚</div>
-            <div class="font-bold">Epic</div>
-            <div class="text-sm text-purple-200">100 scenes</div>
+            <div class="text-xl sm:text-2xl mb-1 sm:mb-2">📚</div>
+            <div class="font-bold text-sm sm:text-base">Epic</div>
+            <div class="text-xs sm:text-sm text-purple-200">100 scenes</div>
             <div class="text-xs text-purple-300">~3 hours</div>
           </div>
         </label>
@@ -109,11 +117,13 @@
 
     <!-- Difficulty Level -->
     <div class="mb-6">
-      <label class="block text-lg font-semibold mb-3">Difficulty Level</label>
-      <p class="text-sm text-purple-300 mb-4">
+      <label class="block text-base sm:text-lg font-semibold mb-3"
+        >Difficulty Level</label
+      >
+      <p class="text-xs sm:text-sm text-purple-300 mb-4">
         How challenging should the story be for players?
       </p>
-      <div class="grid grid-cols-4 gap-4">
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
         <label class="cursor-pointer">
           <input
             type="radio"
@@ -122,11 +132,13 @@
             class="sr-only peer"
           />
           <div
-            class="dark-glass p-4 rounded-xl text-center peer-checked:bg-green-500/30 peer-checked:border-green-400 border border-transparent transition-all"
+            class="dark-glass p-3 sm:p-4 rounded-xl text-center peer-checked:bg-green-500/30 peer-checked:border-green-400 border border-transparent transition-all"
           >
-            <div class="text-2xl mb-2">🟢</div>
-            <div class="font-bold">Easy</div>
-            <div class="text-xs text-purple-300">Forgiving choices</div>
+            <div class="text-xl sm:text-2xl mb-1 sm:mb-2">🟢</div>
+            <div class="font-bold text-sm sm:text-base">Easy</div>
+            <div class="text-xs text-purple-300 hidden sm:block">
+              Forgiving choices
+            </div>
           </div>
         </label>
         <label class="cursor-pointer">
@@ -138,11 +150,13 @@
             class="sr-only peer"
           />
           <div
-            class="dark-glass p-4 rounded-xl text-center peer-checked:bg-yellow-500/30 peer-checked:border-yellow-400 border border-transparent transition-all"
+            class="dark-glass p-3 sm:p-4 rounded-xl text-center peer-checked:bg-yellow-500/30 peer-checked:border-yellow-400 border border-transparent transition-all"
           >
-            <div class="text-2xl mb-2">🟡</div>
-            <div class="font-bold">Medium</div>
-            <div class="text-xs text-purple-300">Balanced challenge</div>
+            <div class="text-xl sm:text-2xl mb-1 sm:mb-2">🟡</div>
+            <div class="font-bold text-sm sm:text-base">Medium</div>
+            <div class="text-xs text-purple-300 hidden sm:block">
+              Balanced challenge
+            </div>
           </div>
         </label>
         <label class="cursor-pointer">
@@ -153,11 +167,13 @@
             class="sr-only peer"
           />
           <div
-            class="dark-glass p-4 rounded-xl text-center peer-checked:bg-red-500/30 peer-checked:border-red-400 border border-transparent transition-all"
+            class="dark-glass p-3 sm:p-4 rounded-xl text-center peer-checked:bg-red-500/30 peer-checked:border-red-400 border border-transparent transition-all"
           >
-            <div class="text-2xl mb-2">🔴</div>
-            <div class="font-bold">Hard</div>
-            <div class="text-xs text-purple-300">Punishing mistakes</div>
+            <div class="text-xl sm:text-2xl mb-1 sm:mb-2">🔴</div>
+            <div class="font-bold text-sm sm:text-base">Hard</div>
+            <div class="text-xs text-purple-300 hidden sm:block">
+              Punishing mistakes
+            </div>
           </div>
         </label>
         <label class="cursor-pointer">
@@ -168,11 +184,13 @@
             class="sr-only peer"
           />
           <div
-            class="dark-glass p-4 rounded-xl text-center peer-checked:bg-purple-500/30 peer-checked:border-purple-400 border border-transparent transition-all"
+            class="dark-glass p-3 sm:p-4 rounded-xl text-center peer-checked:bg-purple-500/30 peer-checked:border-purple-400 border border-transparent transition-all"
           >
-            <div class="text-2xl mb-2">💀</div>
-            <div class="font-bold">Nightmare</div>
-            <div class="text-xs text-purple-300">Extreme challenge</div>
+            <div class="text-xl sm:text-2xl mb-1 sm:mb-2">💀</div>
+            <div class="font-bold text-xs sm:text-base">Nightmare</div>
+            <div class="text-xs text-purple-300 hidden sm:block">
+              Extreme challenge
+            </div>
           </div>
         </label>
       </div>
@@ -182,7 +200,7 @@
     <button
       type="submit"
       id="generate-btn"
-      class="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 py-4 rounded-xl font-bold text-xl transition-all hover:scale-105"
+      class="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 py-3 sm:py-4 rounded-xl font-bold text-lg sm:text-xl transition-all hover:scale-105"
     >
       <span id="generate-text">🎭 Generate Story</span>
       <span id="generate-loading" class="hidden">✨ Creating Magic...</span>
@@ -192,10 +210,10 @@
   <!-- Generation Progress -->
   <div
     id="generation-progress"
-    class="hidden glass p-8 rounded-2xl mt-8 text-center"
+    class="hidden glass p-6 sm:p-8 rounded-2xl mt-6 sm:mt-8 text-center"
   >
-    <div class="text-4xl mb-4 animate-spin">🎨</div>
-    <h3 class="text-2xl font-bold mb-4">Crafting Your Adventure</h3>
+    <div class="text-3xl sm:text-4xl mb-4 animate-spin">🎨</div>
+    <h3 class="text-xl sm:text-2xl font-bold mb-4">Crafting Your Adventure</h3>
     <div class="w-full bg-white/20 rounded-full h-3 mb-4">
       <div
         id="progress-bar"
@@ -203,7 +221,7 @@
         style="width: 0%"
       ></div>
     </div>
-    <p id="progress-text" class="text-purple-200">
+    <p id="progress-text" class="text-purple-200 text-sm sm:text-base">
       Initializing story generator...
     </p>
   </div>

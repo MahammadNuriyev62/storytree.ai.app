@@ -1,19 +1,23 @@
 {% extends "base.html" %} {% block title %}StoryTree - Your Adventure Awaits{%
 endblock %} {% block content %}
 <!-- Hero Section -->
-<div class="text-center mb-16">
-  <h1 class="text-6xl font-bold mb-6 animate-slide-up">
+<div class="text-center mb-8 sm:mb-16">
+  <h1
+    class="text-3xl sm:text-4xl md:text-6xl font-bold mb-4 sm:mb-6 animate-slide-up"
+  >
     <span class="animate-float inline-block">🎭</span>
-    Your Story
+    <span class="hidden sm:inline">Your Story</span>
+    <span class="sm:hidden">Your Story</span>
     <span class="animate-float inline-block" style="animation-delay: 0.5s"
       >📖</span
     >
-    Your Choice
+    <span class="hidden sm:inline">Your Choice</span>
+    <span class="sm:hidden block mt-2">Your Choice</span>
   </h1>
 
   <!-- Rotating Captions -->
   <div
-    class="text-2xl mb-8 animate-fade-in"
+    class="text-lg sm:text-xl md:text-2xl mb-6 sm:mb-8 animate-fade-in px-4"
     id="caption-container"
     style="min-height: 2.5rem"
   >
@@ -23,16 +27,18 @@ endblock %} {% block content %}
   </div>
 
   <!-- CTA Buttons -->
-  <div class="flex justify-center space-x-6 mb-12">
+  <div
+    class="flex flex-col sm:flex-row justify-center gap-4 sm:space-x-6 mb-8 sm:mb-12 px-4"
+  >
     <a
       href="/stories"
-      class="glass px-8 py-4 rounded-2xl hover:scale-105 transition-all font-semibold text-xl"
+      class="glass px-6 sm:px-8 py-3 sm:py-4 rounded-2xl hover:scale-105 transition-all font-semibold text-lg sm:text-xl"
     >
       🚀 Start Adventure
     </a>
     <a
       href="/create"
-      class="dark-glass px-8 py-4 rounded-2xl hover:scale-105 transition-all font-semibold text-xl"
+      class="dark-glass px-6 sm:px-8 py-3 sm:py-4 rounded-2xl hover:scale-105 transition-all font-semibold text-lg sm:text-xl"
     >
       ✨ Create Story
     </a>
@@ -40,32 +46,44 @@ endblock %} {% block content %}
 </div>
 
 <!-- Features Grid -->
-<div class="grid md:grid-cols-3 gap-8 mb-16">
-  <div class="glass p-8 rounded-2xl text-center">
-    <div class="text-4xl mb-4">🎲</div>
-    <h3 class="text-xl font-bold mb-3">Endless Choices</h3>
-    <p class="text-purple-200">Every decision shapes your unique story path</p>
+<div
+  class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 md:gap-8 mb-8 sm:mb-16"
+>
+  <div class="glass p-6 sm:p-8 rounded-2xl text-center">
+    <div class="text-3xl sm:text-4xl mb-4">🎲</div>
+    <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3">Endless Choices</h3>
+    <p class="text-purple-200 text-sm sm:text-base">
+      Every decision shapes your unique story path
+    </p>
   </div>
 
-  <div class="glass p-8 rounded-2xl text-center">
-    <div class="text-4xl mb-4">🌍</div>
-    <h3 class="text-xl font-bold mb-3">Rich Worlds</h3>
-    <p class="text-purple-200">Immerse yourself in AI-generated adventures</p>
+  <div class="glass p-6 sm:p-8 rounded-2xl text-center">
+    <div class="text-3xl sm:text-4xl mb-4">🌍</div>
+    <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3">Rich Worlds</h3>
+    <p class="text-purple-200 text-sm sm:text-base">
+      Immerse yourself in AI-generated adventures
+    </p>
   </div>
 
-  <div class="glass p-8 rounded-2xl text-center">
-    <div class="text-4xl mb-4">🔄</div>
-    <h3 class="text-xl font-bold mb-3">Replay Value</h3>
-    <p class="text-purple-200">Discover new paths with every playthrough</p>
+  <div class="glass p-6 sm:p-8 rounded-2xl text-center">
+    <div class="text-3xl sm:text-4xl mb-4">🔄</div>
+    <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3">Replay Value</h3>
+    <p class="text-purple-200 text-sm sm:text-base">
+      Discover new paths with every playthrough
+    </p>
   </div>
 </div>
 
 <!-- Highlights -->
-<div class="glass p-8 rounded-2xl">
-  <h2 class="text-3xl font-bold mb-6 text-center">✨ What's New</h2>
-  <div class="space-y-4">
+<div class="glass p-6 sm:p-8 rounded-2xl">
+  <h2 class="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6 text-center">
+    ✨ What's New
+  </h2>
+  <div class="space-y-3 sm:space-y-4">
     {% for highlight in highlights %}
-    <div class="dark-glass p-4 rounded-xl">{{ highlight }}</div>
+    <div class="dark-glass p-3 sm:p-4 rounded-xl text-sm sm:text-base">
+      {{ highlight }}
+    </div>
     {% endfor %}
   </div>
 </div>

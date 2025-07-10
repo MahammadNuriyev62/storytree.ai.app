@@ -1,21 +1,27 @@
 {% extends "base.html" %} {% block title %}Stories - StoryTree{% endblock %} {%
 block content %}
-<div class="text-center mb-12">
-  <h1 class="text-5xl font-bold mb-4 animate-slide-up">📚 Story Library</h1>
-  <p class="text-xl text-purple-200 animate-fade-in">
+<div class="text-center mb-8 sm:mb-12">
+  <h1
+    class="text-3xl sm:text-4xl md:text-5xl font-bold mb-3 sm:mb-4 animate-slide-up"
+  >
+    📚 Story Library
+  </h1>
+  <p class="text-lg sm:text-xl text-purple-200 animate-fade-in">
     Choose your next adventure
   </p>
 </div>
 
 {% if stories %}
-<div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+<div
+  class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8"
+>
   {% for story in stories %}
   <div
-    class="glass p-6 rounded-2xl hover:scale-105 transition-all cursor-pointer group relative flex flex-col h-full"
+    class="glass p-4 sm:p-6 rounded-2xl hover:scale-105 transition-all cursor-pointer group relative flex flex-col h-full"
     onclick="window.location.href='/stories/{{ story.id }}'"
   >
     <!-- Difficulty Badge - Top Right -->
-    <div class="absolute top-4 right-4">
+    <div class="absolute top-3 right-3 sm:top-4 sm:right-4">
       <div
         id="difficulty-{{ story.id }}"
         class="px-2 py-1 rounded-full text-xs font-bold border"
@@ -27,35 +33,39 @@ block content %}
     <!-- Story Content (grows to fill space) -->
     <div class="flex-grow">
       <!-- Story Icon -->
-      <div class="text-4xl mb-4 group-hover:animate-bounce">
+      <div class="text-3xl sm:text-4xl mb-3 sm:mb-4 group-hover:animate-bounce">
         {% if story.emojis %} {% for emoji in story.emojis[:3] %}{{ emoji }}{%
         endfor %} {% else %} 📖 {% endif %}
       </div>
 
       <!-- Story Title -->
       <h3
-        class="text-xl font-bold mb-3 group-hover:text-purple-200 transition-colors pr-16"
+        class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 group-hover:text-purple-200 transition-colors pr-12 sm:pr-16"
       >
         {{ story.title }}
       </h3>
 
       <!-- Story Description -->
-      <p class="text-purple-200 mb-4 line-clamp-3">{{ story.description }}</p>
+      <p class="text-purple-200 mb-3 sm:mb-4 line-clamp-3 text-sm sm:text-base">
+        {{ story.description }}
+      </p>
 
       <!-- Story Status -->
-      <div class="flex items-center justify-between mb-4">
+      <div class="flex items-center justify-between mb-3 sm:mb-4">
         <div class="flex items-center space-x-2" id="status-{{ story.id }}">
-          <span class="text-sm text-purple-300">📊 New Story</span>
+          <span class="text-xs sm:text-sm text-purple-300">📊 New Story</span>
         </div>
 
-        <div class="text-sm text-purple-300">{{ story.n_scenes }} scenes</div>
+        <div class="text-xs sm:text-sm text-purple-300">
+          {{ story.n_scenes }} scenes
+        </div>
       </div>
     </div>
 
     <!-- Continue/Start Button (sticks to bottom) -->
-    <div class="border-t border-white/20 pt-4">
+    <div class="border-t border-white/20 pt-3 sm:pt-4">
       <button
-        class="w-full dark-glass py-2 rounded-xl hover:bg-white/20 transition-colors font-semibold"
+        class="w-full dark-glass py-2 rounded-xl hover:bg-white/20 transition-colors font-semibold text-sm sm:text-base"
         id="btn-{{ story.id }}"
       >
         🎮 Start Adventure
@@ -65,15 +75,15 @@ block content %}
   {% endfor %}
 </div>
 {% else %}
-<div class="text-center glass p-12 rounded-2xl">
-  <div class="text-6xl mb-4">📖</div>
-  <h2 class="text-2xl font-bold mb-4">No Stories Yet</h2>
-  <p class="text-purple-200 mb-6">
+<div class="text-center glass p-8 sm:p-12 rounded-2xl">
+  <div class="text-5xl sm:text-6xl mb-4">📖</div>
+  <h2 class="text-xl sm:text-2xl font-bold mb-3 sm:mb-4">No Stories Yet</h2>
+  <p class="text-purple-200 mb-4 sm:mb-6 text-sm sm:text-base">
     Be the first to create an amazing adventure!
   </p>
   <a
     href="/create"
-    class="dark-glass px-8 py-4 rounded-2xl hover:scale-105 transition-all font-semibold"
+    class="dark-glass px-6 sm:px-8 py-3 sm:py-4 rounded-2xl hover:scale-105 transition-all font-semibold text-sm sm:text-base"
   >
     ✨ Create First Story
   </a>
@@ -117,7 +127,7 @@ block content %}
       const difficultyInfo{{ story.id }} = getDifficultyInfo(difficulty{{ story.id }});
       const difficultyBadge{{ story.id }} = document.getElementById('difficulty-{{ story.id }}');
       difficultyBadge{{ story.id }}.textContent = `${difficultyInfo{{ story.id }}.icon} ${difficultyInfo{{ story.id }}.text}`;
-      difficultyBadge{{ story.id }}.className = `px-3 py-1 rounded-full text-xs font-bold border ${difficultyInfo{{ story.id }}.color}`;
+      difficultyBadge{{ story.id }}.className = `px-2 sm:px-3 py-1 rounded-full text-xs font-bold border ${difficultyInfo{{ story.id }}.color}`;
 
       // Load progress
       const progress{{ story.id }} = StoryProgress.load({{ story.id }});
@@ -127,7 +137,7 @@ block content %}
       if(progress{{ story.id }}) {
           btn{{ story.id }}.innerHTML = '▶️ Continue';
           btn{{ story.id }}.classList.add('bg-green-500/20', 'border-green-400');
-          status{{ story.id }}.innerHTML = '<span class="text-sm text-green-300">📖 Already Started</span>';
+          status{{ story.id }}.innerHTML = '<span class="text-xs sm:text-sm text-green-300">📖 Already Started</span>';
       }
       {% endfor %}
   });
