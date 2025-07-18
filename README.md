@@ -2,6 +2,8 @@
 
 StoryTree.ai is a platform for crafting and exploring dynamic, interactive narratives 🤖. Powered by Large Language Models (LLMs), it employs a unique **lazy generation** technique. This allows for the creation of immense, branching story trees 🌲 where every user choice carves a unique path through the adventure.
 
+⚠️ Some parts of readme may be outdated ⚠️
+
 ## 🧠 Core Concept: Lazy Story Generation
 
 Traditional interactive story generation faces a significant challenge: combinatorial explosion 💥. A story with a depth of 50 scenes, each offering just two choices, would necessitate the pre-generation of 2^50 (over a quadrillion!) scenes 🤯. StoryTree.ai elegantly sidesteps this challenge:
