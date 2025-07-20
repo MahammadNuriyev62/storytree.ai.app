@@ -1,5 +1,5 @@
 from typing import Any, List, Optional, Tuple, cast
-from fastapi import APIRouter
+from fastapi import APIRouter, File, HTTPException, Response, UploadFile
 from sqlmodel import Session, select, exists
 from chatbots.chatbot import ChatBot
 from generate import (
@@ -8,6 +8,7 @@ from generate import (
     generate_story_metadata,
 )
 from db_models import Story, Scene, Choice, engine
+from ml.images.sprite_extractor import extract_sprites_from_sheet
 from models import CreateStory, SceneDto, StoriesDto, StoryDetailsDto
 
 light_weight_chatbot = ChatBot()
@@ -196,3 +197,36 @@ async def get_story_by_id(story_id: int):
         if not story:
             raise ValueError(f"Story with id={story_id!r} not found")
         return story
+
+
+@router.post("/extract-sprites")
+async def extract_sprites(file: UploadFile = File(...)):
+    """Extract sprites from uploaded image and return as zip."""
+    try:
+        # Read uploaded file
+        contents = await file.read()
+
+        # Extract sprites
+        zip_data = extract_sprites_from_sheet(contents)
+
+        # Generate safe filename
+        base_filename = (
+            file.filename.rsplit(".", 1)[0] if "." in file.filename else file.filename
+        )
+        # Remove any special characters that might cause issues
+        safe_filename = "".join(
+            c for c in base_filename if c.isalnum() or c in ("-", "_")
+        )[:50]
+        if not safe_filename:
+            safe_filename = "sprites"
+
+        # Return zip file
+        return Response(
+            content=zip_data,
+            media_type="application/zip",
+            headers={
+                "Content-Disposition": f'attachment; filename="sprites_{safe_filename}.zip"'
+            },
+        )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))

@@ -79,3 +79,12 @@ async def create_story_form(request: Request):
         "create.html",
         {"request": request},
     )
+
+
+@router.get("/sprite-extractor", response_class=HTMLResponse)
+async def sprite_extractor_page(request: Request):
+    """Sprite extraction tool page."""
+    return templates.TemplateResponse(
+        "sprite_extractor.html",
+        {"request": request},
+    )
