@@ -1,5 +1,7 @@
 # 🌳 StoryTree.ai: Infinite AI-Powered Interactive Adventures 📖
 
+[Try it here!](https://storytree.up.railway.app)
+
 StoryTree.ai is a platform for crafting and exploring dynamic, interactive narratives 🤖. Powered by Large Language Models (LLMs), it employs a unique **lazy generation** technique. This allows for the creation of immense, branching story trees 🌲 where every user choice carves a unique path through the adventure.
 
 ⚠️ Some parts of readme may be outdated ⚠️
