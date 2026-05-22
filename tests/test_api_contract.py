@@ -56,6 +56,22 @@ def test_generated_scene_shape_is_stable(make_story, get_scene):
         assert set(["id", "text", "loading_text", "next_scene_id"]).issubset(choice.keys())
 
 
+def test_scene_world_state_contract(make_story, get_scene):
+    """The HUD/relationships UI binds to these fields — freeze them."""
+    story = make_story()
+    scene = get_scene(story["id"])  # root scene
+    assert set(["state", "state_changes", "pacing"]).issubset(scene.keys())
+    assert set(["stats", "inventory", "relationships", "flags"]).issubset(scene["state"].keys())
+    assert isinstance(scene["state_changes"], list)
+
+
+def test_story_details_exposes_initial_state(make_story, client):
+    story = make_story()
+    body = client.get(f"/api/stories/{story['id']}").json()
+    assert "initial_state" in body
+    assert set(["stats", "inventory", "relationships", "flags"]).issubset(body["initial_state"].keys())
+
+
 def test_description_endpoint_shape(client):
     body = client.get("/api/stories/description").json()
     assert "description" in body and isinstance(body["description"], str)

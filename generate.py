@@ -67,6 +67,12 @@ story_example = {
         "magicSystem": "The ocean has its own magic, with creatures and phenomena that defy explanation. The civilization has its own ancient magic that is tied to the ocean.",
     },
     "themes": ["Exploration", "Adventure", "Discovery", "Mystery", "Transformation"],
+    "initial_state": {
+        "stats": {"health": 100, "oxygen": 100, "gold": 0},
+        "inventory": ["diving suit", "underwater flashlight"],
+        "relationships": {"Taro": 60, "Captain Nemo": 10, "Maria": 0},
+        "flags": {"found_atlantis": False},
+    },
     "first_introduction_scene": {
         "text": "Iroh the Diver is preparing for his dive into the depths of the ocean. He is excited and nervous, knowing that he is about to embark on an adventure of a lifetime.",
         "choice": {
@@ -108,159 +114,148 @@ async def generate_story_metadata(chatbot: ChatBot, description: str):
             return story_metadata
 
 
-USER_FIRST_MESSAGE_TEMPLATE = (
-    "Generate the first scene (1/{n_scene_total}) with 1 choice!"
+# Empty world state used when a story predates the feature or metadata omits it.
+EMPTY_STATE = {"stats": {}, "inventory": [], "relationships": {}, "flags": {}}
+
+# The exact JSON shape every scene generation must return.
+OUTPUT_SCHEMA = (
+    '{"text": "<scene prose, second person>", '
+    '"pacing": "setup|rising|climax|resolution", '
+    '"state": {"stats": {"<name>": <number>}, "inventory": ["<item>"], '
+    '"relationships": {"<character>": <int -100..100>}, "flags": {"<name>": <bool>}}, '
+    '"state_changes": ["<short human-readable change, e.g. \'Found a brass key\' or \'Health -10\'>"], '
+    '"choices": [{"text": "<choice>", "loading_text": "<in-character anticipation>", '
+    '"is_wrong": <bool>, "is_final": <bool>}]}'
 )
-USER_MESSAGE_TEMPLATE = (
-    'Player proceeds with "{choice}". '
-    "Generate next scene with 1,2 or 3 choices, some of which are wrong based on the difficulty level: {difficulty_level}! "
-    "It should be from the perspective of the main character. "
-    "Choices should be intriguing and engaging, with some leading to the next scene and others leading to a dead end or a wrong decision."
-)
-USER_FINAL_MESSAGE_TEMPLATE = (
-    'Player proceeds with "{choice}". '
-    "Generate final scene with 1 choice to end the story!"
-)
-USER_FINAL_MESSAGE_DISASTER_TEMPLATE = (
-    'Player proceeds with "{choice}". '
-    "Generate scene that ends the story due to the wrong decision! Add 1 choice to end the story, something like 'The End' or 'Game Over'."
-)
+
+
+def _difficulty_label(difficulty: float) -> str:
+    if difficulty <= 0.2:
+        return "easy"
+    if difficulty <= 0.4:
+        return "medium"
+    if difficulty <= 0.8:
+        return "hard"
+    return "impossible"
+
+
+def _current_state(story: Story, scenes: List[Scene]) -> dict:
+    """The world state the next scene should evolve from."""
+    if scenes and scenes[-1].state:
+        return scenes[-1].state
+    return story.initial_state or EMPTY_STATE
 
 
 async def continue_story_branch(
     chatbot: ChatBot, story: Story, scenes: List[Scene], choices: List[Choice]
 ) -> Tuple[dict, bool]:
-    story_json = {
-        **story.model_dump(),
-        "difficulty": "easy"
-        if story.difficulty <= 0.2
-        else (
-            "medium"
-            if story.difficulty <= 0.4
-            else ("hard" if story.difficulty <= 0.8 else "impossible")
-        ),
-    }
-    messages = [
-        {
-            "role": "system",
-            "content": (
-                "You're best story teller. Given the story metadata:\n"
-                f"{story_json}\n\n(/no_think)\n"
-                f"You will create a story with {story.n_scenes} scenes.\n"
-                "IMPORTANT: you output only valid json of the following format:\n"
-                '{"text": "<scene description>", "choices": [{"text": "<choice description>", "loading_text": "<your thoughts>", "is_wrong": <boolean>, "is_final": <boolean>}, ...]}'
-            ),
-        },
-    ]
+    difficulty = _difficulty_label(story.difficulty)
+    target = story.n_scenes
+    depth = len(scenes)  # scenes already materialized on this branch
+    state = _current_state(story, scenes)
 
-    _scenes = scenes + [None]
-    _choices = [None] + choices
+    story_json = {k: v for k, v in story.model_dump().items() if k != "initial_state"}
+    story_json["difficulty"] = difficulty
 
-    for i, (scene, selected_choice) in enumerate(zip(_scenes, _choices)):
-        if selected_choice is None:  # i == 0:
-            messages.append(
-                {
-                    "role": "user",
-                    "content": USER_FIRST_MESSAGE_TEMPLATE.format(
-                        n_scene_total=story.n_scenes
-                    ),
-                }
-            )
-        elif i == story.n_scenes - 1:
-            messages.append(
-                {
-                    "role": "user",
-                    "content": USER_FINAL_MESSAGE_TEMPLATE.format(
-                        choice=selected_choice.text,
-                    ),
-                }
-            )
-        elif scene:
-            messages.append(
-                {
-                    "role": "user",
-                    "content": USER_MESSAGE_TEMPLATE.format(
-                        choice=selected_choice.text,
-                        difficulty_level=story_json["difficulty"],
-                    ),
-                }
-            )
+    system = (
+        "You are a master interactive storyteller. Story metadata:\n"
+        f"{story_json}\n\n"
+        "PERSISTENT WORLD STATE — you maintain state across scenes:\n"
+        "- stats: named numbers (e.g. health, gold, oxygen)\n"
+        "- inventory: list of item names the player carries\n"
+        "- relationships: character name -> integer standing (-100 hostile .. 100 devoted)\n"
+        "- flags: named booleans for story events that have happened\n"
+        "Each scene you MUST return the FULL updated state (carry over unchanged "
+        "values verbatim) plus a short 'state_changes' list describing what changed.\n\n"
+        f"PACING — aim for a narrative arc of roughly {target} scenes, but YOU decide "
+        "when the story resolves; end earlier or later as the story demands. Report the "
+        "current phase via 'pacing' (setup -> rising -> climax -> resolution). As the arc "
+        'nears its end, mark a concluding choice with "is_final": true.\n\n'
+        f"Some choices may be 'wrong' dead-ends according to difficulty: {difficulty}.\n"
+        "Write in the second person, present tense, from the main character's view.\n"
+        "Output ONLY valid JSON of this exact shape (no markdown, no prose outside JSON):\n"
+        + OUTPUT_SCHEMA
+    )
+    messages = [{"role": "system", "content": system}]
 
-        if scene:
-            messages.append(
-                {
-                    "role": "assistant",
-                    "content": json.dumps(
-                        {
-                            "text": scene.text,
-                            "choices": [
-                                {
-                                    "text": c.text,
-                                    "loading_text": c.loading_text,
-                                    "is_wrong": c.is_wrong,
-                                    "is_last": c.is_terminal,
-                                }
-                                for c in scene.choices
-                            ],
-                        }
-                    ),
-                }
-            )
+    # Replay the branch as a real conversation so the model sees how the world
+    # state and narrative have evolved. Each historical scene -> one assistant turn.
+    for i, scene in enumerate(scenes):
+        if i == 0:
+            messages.append({"role": "user", "content": "Begin the story. Generate the opening scene."})
         else:
-            if i != len(_scenes) - 1:
-                raise ValueError(
-                    f"Scene {i + 1} is None, but it should not be. Scenes: {len(_scenes)} (actually {len(scenes)})"
-                )
-
-    selected_choice = choices[-1]
-
-    is_branch_over = False
-
-    if selected_choice.is_pre_final:
-        is_branch_over = True
+            chosen = choices[i - 1].text
+            messages.append({"role": "user", "content": f'The player chose "{chosen}". Continue.'})
         messages.append(
             {
-                "role": "user",
-                "content": USER_FINAL_MESSAGE_TEMPLATE.format(
-                    choice=selected_choice.text,
+                "role": "assistant",
+                "content": json.dumps(
+                    {
+                        "text": scene.text,
+                        "pacing": scene.pacing or "rising",
+                        "state": scene.state or EMPTY_STATE,
+                        "state_changes": scene.state_changes or [],
+                        "choices": [
+                            {
+                                "text": c.text,
+                                "loading_text": c.loading_text,
+                                "is_wrong": c.is_wrong,
+                                "is_final": c.is_pre_final,
+                            }
+                            for c in scene.choices
+                        ],
+                    }
                 ),
             }
+        )
+
+    selected_choice = choices[-1]
+    state_json = json.dumps(state)
+    force_final = depth >= target  # hard cap: stories must terminate
+
+    if selected_choice.is_pre_final or force_final:
+        is_branch_over = True
+        instruction = (
+            f'The player chose "{selected_choice.text}". Current world state: {state_json}. '
+            "Bring the story to a satisfying resolution NOW: generate the final scene with a "
+            'single concluding choice (e.g. "The End"). Update the world state and set '
+            '"pacing":"resolution".'
         )
     elif selected_choice.is_wrong:
         is_branch_over = True
-        messages.append(
-            {
-                "role": "user",
-                "content": USER_FINAL_MESSAGE_DISASTER_TEMPLATE.format(
-                    choice=selected_choice.text,
-                ),
-            }
+        instruction = (
+            f'The player chose "{selected_choice.text}" — a fatal mistake. Current world state: '
+            f"{state_json}. Generate a scene that ends the story due to this wrong decision, with a "
+            'single choice like "Game Over". Reflect the failure in the world state.'
         )
     else:
         is_branch_over = False
-        messages.append(
-            {
-                "role": "user",
-                "content": USER_MESSAGE_TEMPLATE.format(
-                    choice=selected_choice.text,
-                    difficulty_level=story_json["difficulty"],
-                ),
-            }
+        instruction = (
+            f'The player chose "{selected_choice.text}". Current world state: {state_json}. '
+            f"This is roughly scene {depth + 1} of a ~{target}-scene arc. Generate the next scene, "
+            "updating the world state to reflect the choice's consequences. Offer 1-3 intriguing "
+            f"choices, some 'wrong' per {difficulty} difficulty. If the story is reaching its natural "
+            'climax/resolution, mark a concluding choice with "is_final": true.'
         )
+    messages.append({"role": "user", "content": instruction})
 
     response = await chatbot.prompt(messages)
 
     for _ in range(10):
         try:
-            return json.loads(response), is_branch_over
+            parsed = json.loads(response)
+            parsed.setdefault("state", state)
+            parsed.setdefault("state_changes", [])
+            parsed.setdefault("pacing", "resolution" if is_branch_over else "rising")
+            return parsed, is_branch_over
         except json.JSONDecodeError as e:
             messages.append({"role": "assistant", "content": response})
             messages.append(
                 {
                     "role": "user",
                     "content": (
-                        f"The json you output is invalid. \n{e}\n Retry!\n"
-                        '{"text": "<scene description>", "choices": [{"text": "<choice description>", "loading_text": "<your thoughts>"}, ...]}'
+                        f"The json you output is invalid.\n{e}\nRetry — output ONLY this JSON:\n"
+                        + OUTPUT_SCHEMA
                     ),
                 }
             )

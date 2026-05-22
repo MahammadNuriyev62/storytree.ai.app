@@ -3,6 +3,7 @@ from fastapi import APIRouter, File, HTTPException, Response, UploadFile
 from sqlmodel import Session, select, exists
 from chatbots.chatbot import ChatBot
 from generate import (
+    EMPTY_STATE,
     continue_story_branch,
     generate_description,
     generate_story_metadata,
@@ -28,6 +29,7 @@ async def create_story(data: CreateStory):
         heavy_weight_chatbot,
         data.description,
     )
+    initial_state = story_metadata.get("initial_state") or dict(EMPTY_STATE)
     with Session(engine) as session:
         story = Story(
             # root_scene=scene1 # Link the root scene
@@ -41,6 +43,7 @@ async def create_story(data: CreateStory):
             n_scenes=data.n_scenes,
             emojis=story_metadata["emojis"],
             difficulty=data.difficulty,
+            initial_state=initial_state,
         )
         session.add(story)
         session.commit()
@@ -50,6 +53,9 @@ async def create_story(data: CreateStory):
         root_scene = Scene(
             text=story_metadata["first_introduction_scene"]["text"],
             story_id=story_id,
+            state=initial_state,
+            state_changes=[],
+            pacing="setup",
         )
 
         child_scene = Scene(
@@ -143,6 +149,9 @@ async def get_story(story_id: int, choice_id: Optional[int] = None):
         )
 
         scene.text = new_scene_json["text"]
+        scene.state = new_scene_json.get("state")
+        scene.state_changes = new_scene_json.get("state_changes", [])
+        scene.pacing = new_scene_json.get("pacing")
         session.add(scene)
         session.commit()
         scene_id = cast(int, scene.id)

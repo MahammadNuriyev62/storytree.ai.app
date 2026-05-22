@@ -30,9 +30,16 @@ class Story(SQLModel, table=True):
     characters: List[Character] = Field(sa_column=Column(JSON))
     worldview: Dict[str, str] = Field(sa_column=Column(JSON))
 
+    # Seed world state at the start of the story (stats / inventory /
+    # relationships / flags), derived from the metadata at creation time.
+    initial_state: Optional[dict] = Field(
+        default=None, sa_column=Column(JSON, nullable=True)
+    )
+
     scenes: List["Scene"] = Relationship(
         back_populates="story",
     )
+    # Soft target length; the model decides the actual ending (with a hard cap).
     n_scenes: int = Field(ge=1)
     difficulty: float = Field(default=0.2, ge=0, le=1)
 
@@ -40,6 +47,14 @@ class Story(SQLModel, table=True):
 class Scene(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     text: Optional[str] = Field(default=None, nullable=True)
+
+    # World state snapshot AS OF this scene (full state after its events),
+    # the human-readable changes applied entering it, and the narrative phase.
+    state: Optional[dict] = Field(default=None, sa_column=Column(JSON, nullable=True))
+    state_changes: Optional[list] = Field(
+        default=None, sa_column=Column(JSON, nullable=True)
+    )
+    pacing: Optional[str] = Field(default=None, nullable=True)
 
     story_id: int = Field(foreign_key="story.id")
     story: Story = Relationship(back_populates="scenes")

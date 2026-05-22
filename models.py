@@ -44,6 +44,16 @@ class ChoiceDto(BaseModel):
     )
 
 
+class WorldStateDto(BaseModel):
+    stats: dict = Field(default_factory=dict, description="Named numeric stats, e.g. health/gold.")
+    inventory: List[str] = Field(default_factory=list, description="Items the player carries.")
+    relationships: dict = Field(
+        default_factory=dict,
+        description="Character name -> standing (-100 hostile .. 100 devoted).",
+    )
+    flags: dict = Field(default_factory=dict, description="Named booleans for story events.")
+
+
 class SceneDto(BaseModel):
     id: int = Field(
         description="The unique identifier for the scene.",
@@ -56,6 +66,18 @@ class SceneDto(BaseModel):
     choices: List[ChoiceDto] = Field(
         description="A list of choices available in this scene.",
         default_factory=list,
+    )
+    state: Optional[dict] = Field(
+        default=None,
+        description="Full world-state snapshot as of this scene (stats/inventory/relationships/flags).",
+    )
+    state_changes: List[str] = Field(
+        default_factory=list,
+        description="Human-readable changes applied when entering this scene (for the UI).",
+    )
+    pacing: Optional[str] = Field(
+        default=None,
+        description="Narrative phase: setup | rising | climax | resolution.",
     )
 
     class Config:
@@ -144,4 +166,8 @@ class StoryDetailsDto(StoryDto):
         ge=1,
         default=50,
         examples=[50, 100, 200],
+    )
+    initial_state: Optional[dict] = Field(
+        default=None,
+        description="The seed world state at the start of the story.",
     )

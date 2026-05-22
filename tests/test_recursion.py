@@ -73,11 +73,11 @@ def test_divergent_choices_yield_distinct_branches(make_story, get_scene):
     assert branch_a["text"] != branch_b["text"]
 
 
-def test_first_generation_uses_first_scene_template(make_story, get_scene, fake):
-    """The opening generation must include the 'first scene' framing in its prompt."""
+def test_first_generation_includes_opening_framing(make_story, get_scene, fake):
+    """The opening generation must include the 'opening scene' framing in its prompt."""
     story = make_story()
     opening = _root_choice(get_scene, story["id"])
     get_scene(story["id"], opening["id"])
 
     prompt_text = "\n".join(str(m["content"]) for m in fake.calls[-1])
-    assert "Generate the first scene" in prompt_text
+    assert "opening scene" in prompt_text
