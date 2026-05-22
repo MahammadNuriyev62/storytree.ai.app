@@ -1,5 +1,13 @@
 {% extends "base.html" %} {% block title %}Playing {{ story.title }} -
-StoryTree{% endblock %} {% block content %}
+StoryTree{% endblock %} {% block extra_head %}
+<style>
+  /* Tailwind's reset strips margins; restore spacing for rendered markdown */
+  #scene-text p { margin-bottom: 0.85rem; }
+  #scene-text p:last-child { margin-bottom: 0; }
+  #scene-text em { font-style: italic; }
+  #scene-text strong { font-weight: 700; }
+</style>
+{% endblock %} {% block content %}
 <div class="max-w-4xl mx-auto">
   <!-- Story Header -->
   <div
@@ -100,6 +108,15 @@ StoryTree{% endblock %} {% block content %}
   const storyEnd = document.getElementById('story-end');
   const loadingText = document.getElementById('loading-text');
 
+  // Render LLM markdown (e.g. *emphasis*, **bold**) to HTML.
+  function renderMarkdown(text, inline = false) {
+      if (!text) return '';
+      if (window.marked) {
+          return inline ? marked.parseInline(text) : marked.parse(text);
+      }
+      return text; // fallback if CDN failed to load
+  }
+
   // Initialize story
   async function initStory() {
       const savedProgress = StoryProgress.load(storyId);
@@ -145,8 +162,8 @@ StoryTree{% endblock %} {% block content %}
   function displayScene(scene) {
       hideLoading();
 
-      // Animate scene text
-      sceneText.innerHTML = scene.text;
+      // Animate scene text (rendered from markdown)
+      sceneText.innerHTML = renderMarkdown(scene.text);
       sceneText.classList.add('animate-slide-up');
 
       // Clear previous choices
@@ -189,7 +206,7 @@ StoryTree{% endblock %} {% block content %}
           <div class="flex items-start space-x-2 sm:space-x-3">
               <span class="text-xl sm:text-2xl">${isFinale ? '🏁' : '🎯'}</span>
               <div class="flex-1">
-                  <span class="text-sm sm:text-base">${choice.text}</span>
+                  <span class="text-sm sm:text-base">${renderMarkdown(choice.text, true)}</span>
                   ${isFinale ? '<div class="text-xs sm:text-sm text-purple-200 mt-1">Complete the story</div>' : ''}
               </div>
           </div>
@@ -267,7 +284,7 @@ StoryTree{% endblock %} {% block content %}
           finalTextEl.className = 'final-choice-text text-center py-6 sm:py-8 mb-4 sm:mb-6 glass rounded-xl';
           finalTextEl.innerHTML = `
               <div class="text-2xl sm:text-3xl mb-3 sm:mb-4">✨</div>
-              <p class="text-base sm:text-lg italic text-purple-200 px-4">"${finalChoiceText}"</p>
+              <p class="text-base sm:text-lg italic text-purple-200 px-4">"${renderMarkdown(finalChoiceText, true)}"</p>
           `;
           storyEnd.insertBefore(finalTextEl, storyEnd.firstChild);
       }
