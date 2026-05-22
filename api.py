@@ -8,7 +8,6 @@ from generate import (
     generate_story_metadata,
 )
 from db_models import Story, Scene, Choice, engine
-from ml.images.sprite_extractor import extract_sprites_from_sheet
 from models import CreateStory, SceneDto, StoriesDto, StoryDetailsDto
 
 light_weight_chatbot = ChatBot()
@@ -203,6 +202,9 @@ async def get_story_by_id(story_id: int):
 async def extract_sprites(file: UploadFile = File(...)):
     """Extract sprites from uploaded image and return as zip."""
     try:
+        # Imported lazily so the app can boot without OpenCV installed.
+        from ml.images.sprite_extractor import extract_sprites_from_sheet
+
         # Read uploaded file
         contents = await file.read()
 
