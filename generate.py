@@ -70,7 +70,9 @@ story_example = {
     "initial_state": {
         "stats": {"health": 100, "oxygen": 100, "gold": 0},
         "inventory": ["diving suit", "underwater flashlight"],
-        "relationships": {"Taro": 60, "Captain Nemo": 10, "Maria": 0},
+        # Only characters PRESENT at the very start — Taro is along for the dive;
+        # Captain Nemo, Maria, etc. are added to relationships when first met.
+        "relationships": {"Taro": 60},
         "flags": {"found_atlantis": False},
     },
     "first_introduction_scene": {
@@ -98,7 +100,9 @@ async def generate_story_metadata(chatbot: ChatBot, description: str):
             {
                 "role": "user",
                 "content": f"Output the complete json (ONLY JSON) for interactive story quest with the following description: {description}. "
-                "(include the same fields as previously, but matching the new description)",
+                "(include the same fields as previously, but matching the new description). "
+                "In initial_state.relationships include ONLY characters present at the very start (e.g. a companion); "
+                "others are added when the player meets them.",
             },
         ]
     )
@@ -163,7 +167,9 @@ async def continue_story_branch(
         "PERSISTENT WORLD STATE — you maintain state across scenes:\n"
         "- stats: named numbers (e.g. health, gold, oxygen)\n"
         "- inventory: list of item names the player carries\n"
-        "- relationships: character name -> integer standing (-100 hostile .. 100 devoted)\n"
+        "- relationships: character name -> integer standing (-100 hostile .. 100 devoted). "
+        "ONLY include characters the player has actually MET. Add a character the first time "
+        "they appear in a scene; never list characters not yet encountered.\n"
         "- flags: named booleans for story events that have happened\n"
         "Each scene you MUST return the FULL updated state (carry over unchanged "
         "values verbatim) plus a short 'state_changes' list describing what changed.\n\n"
