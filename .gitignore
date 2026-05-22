@@ -4,3 +4,7 @@ __pycache__/
 .env*
 database.db
 .DS_Store
+node_modules/
+frontend/node_modules/
+# SPA build output (built in Docker / locally via `npm run build`)
+static/app/

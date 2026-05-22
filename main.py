@@ -1,6 +1,7 @@
 import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 
@@ -40,3 +41,18 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 app.include_router(api_router, prefix="/api", tags=["api"])
 app.include_router(ui_router, tags=["ui"])
+
+# --- React SPA (built by `frontend/`) served under /app, non-destructively. ---
+SPA_DIR = os.path.join(os.path.dirname(__file__), "static", "app")
+if os.path.isdir(SPA_DIR):
+    app.mount(
+        "/app/assets",
+        StaticFiles(directory=os.path.join(SPA_DIR, "assets")),
+        name="spa-assets",
+    )
+
+    @app.get("/app")
+    @app.get("/app/{full_path:path}")
+    async def serve_spa(full_path: str = ""):
+        # Return index.html for all client-side routes (SPA fallback).
+        return FileResponse(os.path.join(SPA_DIR, "index.html"))
