@@ -47,7 +47,7 @@ DEFAULT_METADATA = {
         "flags": {},
     },
     "first_introduction_scene": {
-        "text": "Tester stands at the root of the story tree.",
+        "text": "Tester stands at the root of the story tree.{{break}}Branches stretch in every direction, each one a path waiting to be walked.",
         "choice": {"text": "Step into the maze", "loading_text": "Entering the maze..."},
     },
 }
@@ -72,26 +72,36 @@ def _last_assistant_state(messages):
     return dict(EMPTY_STATE)
 
 
-def _evolve(prev: dict) -> tuple[dict, list]:
-    """Deterministically advance the world state one step."""
+def _evolve(prev: dict, costly: bool = False) -> tuple[dict, list]:
+    """Deterministically advance the world state one step.
+
+    `costly=True` (selected choice was is_wrong) applies a bigger health hit and
+    a relationship penalty — proves that wrong choices continue the story but
+    hurt the player, instead of auto-terminating.
+    """
     prev = prev or dict(EMPTY_STATE)
     inv = list(prev.get("inventory", []))
     relic = f"relic_{len(inv) + 1}"
     inv.append(relic)
 
     stats = dict(prev.get("stats", {}))
-    stats["health"] = max(0, stats.get("health", 100) - 5)
+    health_hit = 20 if costly else 5
+    stats["health"] = max(0, stats.get("health", 100) - health_hit)
 
     rels = dict(prev.get("relationships", {}))
     if rels:
         first = next(iter(rels))
-        rels[first] = min(100, rels[first] + 5)
+        rel_delta = -10 if costly else 5
+        rels[first] = max(-100, min(100, rels[first] + rel_delta))
 
     flags = dict(prev.get("flags", {}))
     flags["step_taken"] = True
 
     state = {"stats": stats, "inventory": inv, "relationships": rels, "flags": flags}
-    changes = [f"Picked up {relic}", "Health -5"]
+    if costly:
+        changes = [f"That cost you. Health -{health_hit}", "An ally cooled toward you"]
+    else:
+        changes = [f"Picked up {relic}", f"Health -{health_hit}"]
     return state, changes
 
 
@@ -130,14 +140,6 @@ class FakeChatBot:
         self.scene_calls += 1
         prev_state = _last_assistant_state(messages)
 
-        if "ends the story due to this wrong decision" in last_user:
-            return json.dumps({
-                "text": "Your mistake catches up with you. Darkness.",
-                "pacing": "resolution",
-                "state": prev_state,
-                "state_changes": ["You perished"],
-                "choices": [{"text": "Game Over", "loading_text": "RIP", "is_wrong": False, "is_final": False}],
-            })
         if "satisfying resolution" in last_user:
             return json.dumps({
                 "text": "You reach the end of the tale, changed but whole.",
@@ -147,10 +149,17 @@ class FakeChatBot:
                 "choices": [{"text": "The End", "loading_text": "Fin", "is_wrong": False, "is_final": False}],
             })
 
-        # normal next scene: evolve the world state
-        state, changes = _evolve(prev_state)
+        # Normal continuation. A 'COSTLY' instruction (is_wrong choice) hurts more
+        # but the story still continues — no more auto-terminate on a wrong choice.
+        costly = "COSTLY choice" in last_user
+        state, changes = _evolve(prev_state, costly=costly)
+        text = (
+            "The cost of your choice settles around you.{{break}}Three paths still lie ahead, harder now."
+            if costly
+            else "A new chamber of the maze unfolds before you.{{break}}Three exits yawn into darkness; you must choose which way to go."
+        )
         return json.dumps({
-            "text": "A new chamber of the maze unfolds before you.",
+            "text": text,
             "pacing": "rising",
             "state": state,
             "state_changes": changes,

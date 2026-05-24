@@ -55,4 +55,9 @@ if os.path.isdir(SPA_DIR):
     @app.get("/app/{full_path:path}")
     async def serve_spa(full_path: str = ""):
         # Return index.html for all client-side routes (SPA fallback).
-        return FileResponse(os.path.join(SPA_DIR, "index.html"))
+        # no-cache so browsers always revalidate the entry HTML (assets are
+        # content-hashed, so they cache safely).
+        return FileResponse(
+            os.path.join(SPA_DIR, "index.html"),
+            headers={"Cache-Control": "no-cache, no-store, must-revalidate"},
+        )

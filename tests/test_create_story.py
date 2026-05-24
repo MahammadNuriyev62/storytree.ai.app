@@ -24,7 +24,7 @@ def test_create_story_builds_root_scene_choice_and_child(make_story):
         without_text = [sc for sc in scenes if sc.text is None]
         assert len(with_text) == 1
         assert len(without_text) == 1
-        assert with_text[0].text == "Tester stands at the root of the story tree."
+        assert with_text[0].text.startswith("Tester stands at the root of the story tree.")
 
         # one root choice, pointing from the root scene to the child placeholder
         assert len(choices) == 1

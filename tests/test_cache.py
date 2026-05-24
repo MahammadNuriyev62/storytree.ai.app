@@ -8,7 +8,7 @@ ever regenerates an already-materialized scene, these tests fail.
 def test_root_scene_is_already_materialized(make_story, get_scene, fake):
     story = make_story()
     root = get_scene(story["id"])  # no choice_id
-    assert root["text"] == "Tester stands at the root of the story tree."
+    assert root["text"].startswith("Tester stands at the root of the story tree.")
     assert fake.scene_calls == 0  # root text came from creation, not generation
 
 

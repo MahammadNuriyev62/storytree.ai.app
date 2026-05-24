@@ -36,6 +36,17 @@ class Story(SQLModel, table=True):
         default=None, sa_column=Column(JSON, nullable=True)
     )
 
+    # Per-story visual asset manifests. Each value is a dict whose leaves are
+    # public `/static/...` URLs the SPA can drop into <img src>. Populated by
+    # ml/images/lighthouse_assets.wire_uploads(); None for stories without
+    # pre-generated art.
+    character_sprites: Optional[dict] = Field(
+        default=None, sa_column=Column(JSON, nullable=True)
+    )
+    backgrounds: Optional[dict] = Field(
+        default=None, sa_column=Column(JSON, nullable=True)
+    )
+
     scenes: List["Scene"] = Relationship(
         back_populates="story",
     )
@@ -55,6 +66,16 @@ class Scene(SQLModel, table=True):
         default=None, sa_column=Column(JSON, nullable=True)
     )
     pacing: Optional[str] = Field(default=None, nullable=True)
+
+    # Visual composition for the SPA: which background + which character
+    # sprite(s) and expression(s) to render for this scene. Shape:
+    #   {"setting": "<background id>",
+    #    "characters_present": [{"name": "Iwan", "expression": "scared"}, ...]}
+    # Constrained at generation time to keys present in
+    # Story.character_sprites / Story.backgrounds.
+    stage: Optional[dict] = Field(
+        default=None, sa_column=Column(JSON, nullable=True)
+    )
 
     story_id: int = Field(foreign_key="story.id")
     story: Story = Relationship(back_populates="scenes")

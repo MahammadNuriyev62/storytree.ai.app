@@ -4,6 +4,19 @@ import zipfile
 from PIL import Image
 import io
 
+from rembg import new_session, remove
+
+# Lazy-init the rembg ONNX session once per process (model is ~150MB,
+# downloaded on first use; subsequent inferences are ~0.5–2s per sprite on CPU).
+_REMBG_SESSION = None
+
+
+def _get_rembg_session():
+    global _REMBG_SESSION
+    if _REMBG_SESSION is None:
+        _REMBG_SESSION = new_session("u2net")
+    return _REMBG_SESSION
+
 
 def extract_sprites_from_sheet(image_bytes: bytes) -> bytes:
     """
@@ -62,40 +75,32 @@ def extract_sprites_from_sheet(image_bytes: bytes) -> bytes:
     # Extract individual sprites
     sprite_buffers = []
 
+    # Asymmetric padding into the surrounding sheet background:
+    #   - generous on top  -> protect hats, hair, raised arms
+    #   - minimal on bottom -> avoid catching label text ("1. ANGRY" etc.) below
+    #   - moderate on sides -> protect outstretched arms / props
+    pad_top, pad_bottom, pad_side = 30, 5, 20
+
+    session = _get_rembg_session()
+
     for idx, (x, y, w, h) in enumerate(boxes, 1):
-        roi = sheet[y : y + h, x : x + w].copy()
-        mask = np.zeros(roi.shape[:2], np.uint8)
-        margin = 15
+        # Pad the connected-component bbox so rembg sees a bit of surrounding
+        # background — improves edge quality. Asymmetric pad keeps label text
+        # below the figure out of the ROI.
+        x0 = max(0, x - pad_side)
+        y0 = max(0, y - pad_top)
+        x1 = min(W, x + w + pad_side)
+        y1 = min(H, y + h + pad_bottom)
+        roi_bgr = sheet[y0:y1, x0:x1]
 
-        # Set probable background and foreground regions
-        mask[:margin, :] = cv2.GC_PR_BGD
-        mask[-margin:, :] = cv2.GC_PR_BGD
-        mask[:, :margin] = cv2.GC_PR_BGD
-        mask[:, -margin:] = cv2.GC_PR_BGD
-        mask[margin : h - margin, margin : w - margin] = cv2.GC_PR_FGD
+        # rembg expects a PIL image (or bytes); return is RGBA PIL with a
+        # semantically-segmented alpha — no more GrabCut color-confusion, so
+        # hallucinated props (e.g. a white wall the model invented) drop out.
+        roi_rgb = cv2.cvtColor(roi_bgr, cv2.COLOR_BGR2RGB)
+        cutout = remove(Image.fromarray(roi_rgb), session=session)
 
-        # Apply GrabCut algorithm
-        bgdModel = np.zeros((1, 65), np.float64)
-        fgdModel = np.zeros((1, 65), np.float64)
-        cv2.grabCut(roi, mask, None, bgdModel, fgdModel, 5, cv2.GC_INIT_WITH_MASK)
-
-        # Create alpha channel
-        alpha = np.where((mask == cv2.GC_FGD) | (mask == cv2.GC_PR_FGD), 255, 0).astype(
-            np.uint8
-        )
-
-        # Refine mask with morphological operations
-        k3 = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
-        alpha = cv2.morphologyEx(alpha, cv2.MORPH_CLOSE, k3, iterations=1)
-        alpha = cv2.morphologyEx(alpha, cv2.MORPH_OPEN, k3, iterations=1)
-
-        # Convert to RGBA
-        rgba = cv2.cvtColor(roi, cv2.COLOR_BGR2RGBA)
-        rgba[:, :, 3] = alpha
-
-        # Save to buffer
         img_buffer = io.BytesIO()
-        Image.fromarray(rgba).save(img_buffer, format="PNG")
+        cutout.save(img_buffer, format="PNG")
         sprite_buffers.append((f"sprite_{idx}.png", img_buffer.getvalue()))
 
     # Create zip file in memory

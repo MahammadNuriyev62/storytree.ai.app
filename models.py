@@ -79,6 +79,15 @@ class SceneDto(BaseModel):
         default=None,
         description="Narrative phase: setup | rising | climax | resolution.",
     )
+    stage: Optional[dict] = Field(
+        default=None,
+        description=(
+            "Visual composition for the SPA: "
+            '{"setting": <background id>, '
+            '"characters_present": [{"name": <character>, "expression": <expr>}, ...]}. '
+            "All values are guaranteed to exist in the story's asset manifest."
+        ),
+    )
 
     class Config:
         orm_mode = True
@@ -170,4 +179,20 @@ class StoryDetailsDto(StoryDto):
     initial_state: Optional[dict] = Field(
         default=None,
         description="The seed world state at the start of the story.",
+    )
+    character_sprites: Optional[dict] = Field(
+        default=None,
+        description=(
+            "Per-character expression sprite URLs, keyed by character name. "
+            'Shape: {<name>: {"description": str, "position": "left|center|right", '
+            '"expressions": {<expr>: <url>}}}. None for stories without art.'
+        ),
+    )
+    backgrounds: Optional[dict] = Field(
+        default=None,
+        description=(
+            "Per-setting background URLs, keyed by setting id. "
+            'Shape: {<setting_id>: {"description": str, "url": <url>}}. '
+            "None for stories without art."
+        ),
     )

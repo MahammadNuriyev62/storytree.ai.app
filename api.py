@@ -17,6 +17,35 @@ heavy_weight_chatbot = ChatBot(model_name="o4-mini")
 router = APIRouter()
 
 
+def _sanitize_stage(stage: Optional[dict], story: Story) -> Optional[dict]:
+    """Drop any stage values that don't match the story's asset manifest.
+
+    The model is told the available settings + characters, but we still validate
+    server-side so a hallucinated key doesn't reach the SPA as a broken image.
+    """
+    if not stage or not isinstance(stage, dict):
+        return None
+    settings_map = story.backgrounds or {}
+    sprites_map = story.character_sprites or {}
+    setting = stage.get("setting")
+    if setting and setting not in settings_map:
+        setting = None
+
+    valid_expressions = {"angry", "sad", "smiling", "neutral", "scared"}
+    cleaned_chars = []
+    for entry in stage.get("characters_present") or []:
+        if not isinstance(entry, dict):
+            continue
+        name = entry.get("name")
+        expr = entry.get("expression")
+        if name in sprites_map and expr in valid_expressions:
+            cleaned_chars.append({"name": name, "expression": expr})
+
+    if not setting and not cleaned_chars:
+        return None
+    return {"setting": setting, "characters_present": cleaned_chars}
+
+
 @router.get("/stories/description")
 async def generate_story_description():
     description = await generate_description(light_weight_chatbot)
@@ -152,6 +181,7 @@ async def get_story(story_id: int, choice_id: Optional[int] = None):
         scene.state = new_scene_json.get("state")
         scene.state_changes = new_scene_json.get("state_changes", [])
         scene.pacing = new_scene_json.get("pacing")
+        scene.stage = _sanitize_stage(new_scene_json.get("stage"), story)
         session.add(scene)
         session.commit()
         scene_id = cast(int, scene.id)

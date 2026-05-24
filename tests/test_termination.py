@@ -11,13 +11,25 @@ def _first_real_scene(make_story, get_scene, n_scenes=10):
     return story, scene
 
 
-def test_wrong_choice_leads_to_terminal_disaster(make_story, get_scene):
+def test_wrong_choice_continues_with_consequences(make_story, get_scene):
+    """is_wrong is COSTLY but not fatal — story continues, with a bigger state hit."""
     story, scene = _first_real_scene(make_story, get_scene)
-    wrong = scene["choices"][1]
-    disaster = get_scene(story["id"], wrong["id"])
-    assert disaster["choices"], "even an ending shows a final 'Game Over' choice"
-    assert all(c["next_scene_id"] is None for c in disaster["choices"]), (
-        "a disaster ending must be terminal"
+    health_before = scene["state"]["stats"]["health"]
+
+    # baseline: a normal 'continue' choice -> small health hit
+    normal_next = get_scene(story["id"], scene["choices"][0]["id"])
+    normal_hit = health_before - normal_next["state"]["stats"]["health"]
+
+    # the wrong choice from the same parent -> story continues, bigger hit
+    wrong_next = get_scene(story["id"], scene["choices"][1]["id"])
+    wrong_hit = health_before - wrong_next["state"]["stats"]["health"]
+
+    assert wrong_next["choices"], "story must continue after a costly choice"
+    assert any(c["next_scene_id"] is not None for c in wrong_next["choices"]), (
+        "a wrong choice must NOT auto-terminate the story"
+    )
+    assert wrong_hit > normal_hit, (
+        f"costly choice should hurt more than a normal one (wrong={wrong_hit}, normal={normal_hit})"
     )
 
 
