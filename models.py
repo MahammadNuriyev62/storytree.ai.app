@@ -196,3 +196,13 @@ class StoryDetailsDto(StoryDto):
             "None for stories without art."
         ),
     )
+    art_status: Optional[str] = Field(
+        default="none",
+        description=(
+            "Art generation lifecycle. One of: "
+            "'none' (no prompts on record), 'pending' (prompts ready, "
+            "not generated), 'generating' (BackgroundTask running), "
+            "'ready' (sprites + backgrounds populated), 'failed' "
+            "(last run errored — retry via POST /stories/{id}/generate_assets)."
+        ),
+    )

@@ -21,6 +21,9 @@ EXPECTED = {
         "initial_state": "TEXT",       # JSON
         "character_sprites": "TEXT",   # JSON
         "backgrounds": "TEXT",         # JSON
+        "art_style": "TEXT",
+        "settings": "TEXT",            # JSON list
+        "art_status": "TEXT DEFAULT 'none' NOT NULL",
     },
     "scene": {
         "state": "TEXT",         # JSON

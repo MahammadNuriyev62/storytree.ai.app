@@ -14,6 +14,20 @@ class Character(BaseModel):
     role: str
     traits: List[str]
     description: str
+    # Visual fields — present when the story metadata generator was asked to
+    # produce art prompts. `art_prompt` is the visual brief fed to Nano Banana;
+    # `position` hints stage placement (left/center/right); `poses` overrides
+    # the default per-expression pose descriptions in the sprite sheet.
+    art_prompt: Optional[str] = None
+    position: Optional[str] = None  # "left" | "center" | "right"
+    poses: Optional[Dict[str, str]] = None  # {expression -> pose description}
+
+
+class Setting(BaseModel):
+    """A location in the story's world that gets a pre-generated background."""
+    id: str  # slug used by stage.setting + as filename
+    description: str  # narrative description for prompt context
+    art_prompt: str  # visual brief for Nano Banana
 
 
 # --- SQLModel Table Definitions ---
@@ -38,14 +52,32 @@ class Story(SQLModel, table=True):
 
     # Per-story visual asset manifests. Each value is a dict whose leaves are
     # public `/static/...` URLs the SPA can drop into <img src>. Populated by
-    # ml/images/lighthouse_assets.wire_uploads(); None for stories without
-    # pre-generated art.
+    # ml/images/auto_gen.py at the end of art generation, or by a one-shot
+    # seed script for hand-curated stories. None until art is generated.
     character_sprites: Optional[dict] = Field(
         default=None, sa_column=Column(JSON, nullable=True)
     )
     backgrounds: Optional[dict] = Field(
         default=None, sa_column=Column(JSON, nullable=True)
     )
+
+    # Visual style guideline prepended to every art prompt for this story —
+    # palette, medium, lighting language. E.g. "Anime-illustration style,
+    # slightly desaturated coastal-winter palette". LLM-emitted at metadata
+    # generation time.
+    art_style: Optional[str] = Field(default=None, nullable=True)
+    # Locations available for `stage.setting`. Each entry is a Setting dict;
+    # the LLM picks ids from here when emitting per-scene stage info.
+    settings: Optional[List[dict]] = Field(
+        default=None, sa_column=Column(JSON, nullable=True)
+    )
+    # Art generation lifecycle. One of:
+    #   "none"        - no art prompts on record (older story or skipped)
+    #   "pending"     - art prompts present, generation not yet triggered
+    #   "generating"  - background task is calling Nano Banana right now
+    #   "ready"       - character_sprites + backgrounds are populated
+    #   "failed"      - last attempt errored; see logs
+    art_status: str = Field(default="none", nullable=False)
 
     scenes: List["Scene"] = Relationship(
         back_populates="story",

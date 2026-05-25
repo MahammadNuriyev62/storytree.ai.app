@@ -27,6 +27,11 @@ example_description = "In the darkest depths of the ocean, Iroh the Diver stumbl
 story_example = {
     "title": "Deep under ocean",
     "description": "Story about a deep-sea diver and his trusted friend who discover an ancient civilization and meet interesting creatures.",
+    "art_style": (
+        "Anime-illustration style, clean lines, soft cel shading, slightly "
+        "desaturated deep-ocean palette (midnight blue, brass, slate-grey, "
+        "with faint amber bioluminescence accents)."
+    ),
     "main_character": {
         "name": "Iroh the Diver",
         "role": "Diver",
@@ -39,24 +44,140 @@ story_example = {
             "role": "Captain of the Nautilus",
             "traits": ["brave", "adventurous", "intelligent"],
             "description": "A legendary captain who has explored the ocean for years and knows its secrets. Not a normal human anymore.",
+            # Visual brief for Nano Banana — describe outfit, build, hair,
+            # palette anchors, distinguishing features. NO pose grid here;
+            # the code appends that scaffolding.
+            "art_prompt": (
+                "Captain Nemo, a man in his late fifties with weather-beaten "
+                "salt-tanned skin, deep-set steel-grey eyes, a thick salt-and-"
+                "pepper beard trimmed close, and a long faintly-glowing scar "
+                "running from his right temple down past his ear (the ocean's "
+                "magic re-shaped him). He wears a navy-blue captain's coat with "
+                "tarnished brass buttons and a high collar, a worn white cotton "
+                "shirt with rolled sleeves, dark canvas trousers tucked into "
+                "seasoned leather sea-boots, and a battered captain's hat with "
+                "a brass anchor pin."
+            ),
+            "position": "right",
+            "poses": {
+                "angry": "shoulders squared, fists at his sides, jaw set under the beard",
+                "sad": "head bowed, one hand resting on the hat held against his chest",
+                "smiling": "small wry half-smile, weight on one leg, hands clasped behind back",
+                "neutral": "hands behind his back, captain's parade stance, watching",
+                "scared": "eyes wide, half-step back, one hand raised palm-out",
+            },
         },
         {
             "name": "Maria",
             "role": "Former Queen of Atlantis",
-            "traits": ["wise", "mysterious", "elegant", "sexy", "passionate"],
+            "traits": ["wise", "mysterious", "elegant", "passionate"],
             "description": "The former queen of Atlantis who has been transformed into a mermaid. She is wise and mysterious, with a deep connection to the ocean.",
-        },
-        {
-            "name": "Monster of the Deep",
-            "role": "Guardian of Atlantis",
-            "traits": ["fearsome", "ancient", "powerful", "dangerous"],
-            "description": "A fearsome creature that guards the entrance to Atlantis. It is ancient and powerful, with a deep connection to the ocean.",
+            "art_prompt": (
+                "Maria, a woman in her early thirties of timeless ageless beauty, "
+                "with long flowing silver-blue hair shot through with strands of "
+                "kelp, luminous sea-green eyes, and pale opalescent skin that "
+                "shimmers faintly. From the waist down a long iridescent "
+                "blue-green mermaid tail with translucent fins; from the waist "
+                "up a fitted top of woven seaweed and small pearls. A delicate "
+                "coral crown rests above her brow, and barnacled silver bracelets "
+                "ring her wrists."
+            ),
+            "position": "left",
+            "poses": {
+                "angry": "tail curled tight, fists clenched, glare like a deep current",
+                "sad": "tail drifting low, one hand to her chest, eyes downcast",
+                "smiling": "a slow knowing half-smile, head tilted, hair drifting",
+                "neutral": "weight balanced, hands clasped at the waist, watching",
+                "scared": "tail tense beneath her, both hands raised defensively",
+            },
         },
         {
             "name": "Taro",
             "role": "Iroh's Friend and Navigator",
             "traits": ["loyal", "resourceful", "playful"],
             "description": "A fellow diver and longtime friend of Iroh. He navigates treacherous currents with ease and lightens tense moments with his humor, always ready to support Iroh in every challenge.",
+            "art_prompt": (
+                "Taro, a man in his early thirties with a friendly weather-tanned "
+                "face, short messy black hair, dark almond-shaped eyes, and a "
+                "quick easy grin. He wears a streamlined modern diving suit in "
+                "slate grey and orange high-vis trim, a chest-mounted dive "
+                "computer, a pair of fins clipped to his belt, and a small "
+                "underwater flashlight on a lanyard around his neck. A nautical "
+                "compass tattoo on his right forearm."
+            ),
+            "position": "center",
+            "poses": {
+                "angry": "fists clenched, brow furrowed, leaning slightly forward",
+                "sad": "shoulders slumped, hand on the back of his neck, eyes down",
+                "smiling": "broad open-mouth grin, thumbs hooked in his belt",
+                "neutral": "one hand on hip, easy weight on one leg",
+                "scared": "eyes wide, both hands raised in front of his chest",
+            },
+        },
+    ],
+    "settings": [
+        {
+            "id": "ship_deck_dawn",
+            "description": "The deck of the diving ship Ariadne at dawn — the launching point of every expedition.",
+            "art_prompt": (
+                "The wooden deck of a modern small dive-research ship at dawn, "
+                "viewed from amidships. Coils of orange rope, scuba tanks lined "
+                "up in a rack, a yellow inflatable RIB lashed to the rail, a "
+                "small wooden chart table under a canvas awning, dive gear "
+                "draped over a bench. The sea is mirror-flat and lavender-pink "
+                "in the dawn light; a thin mist drifts low over the water. "
+                "Empty, anticipatory."
+            ),
+        },
+        {
+            "id": "deep_trench",
+            "description": "The black water of an oceanic trench, far from any light — where the descent begins.",
+            "art_prompt": (
+                "A vast underwater chasm in deep ocean water, viewed from above "
+                "looking down into total darkness. The cliffs of the trench fade "
+                "from slate-blue at the top into pure black. A few faint amber "
+                "bioluminescent specks drift in the dark. No light source except "
+                "a single distant glow far below. Vast, cold, ancient."
+            ),
+        },
+        {
+            "id": "nautilus_bridge",
+            "description": "The brass-and-mahogany bridge of the Nautilus, lit by amber gas-lamps.",
+            "art_prompt": (
+                "The interior bridge of a Victorian-era ornate submarine, all "
+                "polished mahogany panelling and tarnished brass. A large "
+                "ship's wheel mounted on a brass pedestal in the centre. "
+                "Glass-fronted dials and gauges inlaid into the walls. "
+                "Circular porthole windows showing dark deep water outside. "
+                "Amber gas-lamp light pools warmly over leather-bound charts on "
+                "a central table. Empty, atmospheric, hushed."
+            ),
+        },
+        {
+            "id": "atlantis_ruins",
+            "description": "The sunken plaza of Atlantis — pale marble overgrown with coral and kelp.",
+            "art_prompt": (
+                "The submerged plaza of an ancient sunken city, viewed in deep "
+                "blue water. Pale weathered marble columns lean at angles, "
+                "draped with red and purple coral and long kelp fronds. A "
+                "broken statue of a robed figure missing its head sits on a "
+                "tilted pedestal. Shoals of small silver fish drift through. "
+                "Sunlight filters down in pale shifting beams from far above. "
+                "Vast, silent, beautiful."
+            ),
+        },
+        {
+            "id": "monster_lair",
+            "description": "A flooded undersea cavern where the Monster of the Deep makes its home.",
+            "art_prompt": (
+                "A vast underwater rock cavern lit by a small cluster of "
+                "bioluminescent fungi clinging to the ceiling, casting cold "
+                "blue-green light. The cavern floor is strewn with broken ship "
+                "hulls and the bleached bones of huge sea creatures. Massive "
+                "claw-marks score the walls. Dark water fills the chamber; the "
+                "ceiling vanishes into shadow. Empty (the monster is offscreen), "
+                "menacing, primeval."
+            ),
         },
     ],
     "emojis": ["🌊", "🐠", "🏴‍☠"],
@@ -77,6 +198,10 @@ story_example = {
     },
     "first_introduction_scene": {
         "text": "Iroh the Diver checks his oxygen tanks one last time, the rusted gauges trembling under his thumb.{{break}}Above him the *Ariadne* rocks in the swell; below him, three thousand feet of black water and whatever rumour put him here.",
+        # Optional — if present, used to seed the root scene's visual stage so
+        # the very first page already has a background. Pick an id from the
+        # settings list above (and any characters present at the very start).
+        "stage": {"setting": "ship_deck_dawn", "characters_present": []},
         "choice": {
             "text": "Dive into the ocean",
             "loading_text": "Diving into the ocean, let's see what we can find",
@@ -90,7 +215,20 @@ async def generate_story_metadata(chatbot: ChatBot, description: str):
         [
             {
                 "role": "system",
-                "content": "You only output valid JSON. (/no_think)",
+                "content": (
+                    "You only output valid JSON for an interactive visual-novel "
+                    "story. Two things matter most:\n"
+                    "  1. Narrative fields (description, characters[].description, "
+                    "worldview, themes, initial_state) shape how the story plays.\n"
+                    "  2. Visual fields (art_style, characters[].art_prompt, "
+                    "characters[].poses, settings[].art_prompt) are fed verbatim "
+                    "to a Nano Banana image model. They MUST be richly specific: "
+                    "anchored to concrete visible objects (outfit fabric, hair "
+                    "colour, scar locations, lighting palette, exact framing). "
+                    "Generic prose like 'a mysterious cottage' will produce "
+                    "unusable art. Match the level of detail in the example. "
+                    "(/no_think)"
+                ),
             },
             {
                 "role": "user",
@@ -99,10 +237,36 @@ async def generate_story_metadata(chatbot: ChatBot, description: str):
             {"role": "assistant", "content": json.dumps(story_example)},
             {
                 "role": "user",
-                "content": f"Output the complete json (ONLY JSON) for interactive story quest with the following description: {description}. "
-                "(include the same fields as previously, but matching the new description). "
-                "In initial_state.relationships include ONLY characters present at the very start (e.g. a companion); "
-                "others are added when the player meets them.",
+                "content": (
+                    f"Output the complete json (ONLY JSON) for interactive story "
+                    f"quest with the following description: {description}. "
+                    "Include EVERY field shown in the example: title, description, "
+                    "art_style, main_character, characters (with art_prompt, "
+                    "position, poses for each), settings (4-6 entries, each with "
+                    "id/description/art_prompt), emojis, worldview, themes, "
+                    "initial_state, first_introduction_scene. "
+                    "In initial_state.relationships include ONLY characters "
+                    "present at the very start (a companion etc.); others get "
+                    "added when the player meets them. "
+                    "Settings ids are lowercase_snake_case slugs; pick 4-6 "
+                    "locations that the story will plausibly visit. "
+                    "Art prompts MUST be as detailed as the example's — describe "
+                    "outfits with fabric + colour, hair + eye colour + age. "
+                    "Skip art_prompt for main_character (player POV is never "
+                    "shown on screen).\n\n"
+                    "CRITICAL CHARACTER ART_PROMPT RULE: characters[].art_prompt "
+                    "MUST describe ONLY the character — face, body, hair, "
+                    "clothing, distinguishing physical features. It must NEVER "
+                    "include lighting, environment, scene context, or anything "
+                    "spatial behind the character (no 'lit by hearthfire', no "
+                    "'behind her a pine forest', no 'amber dusk through the "
+                    "window'). Those belong in settings[].art_prompt or "
+                    "art_style. Reason: each character is rendered on a plain "
+                    "white sprite sheet across five poses; any scene context in "
+                    "the prompt makes the image generator paint a backdrop, "
+                    "which then bleeds between figures and breaks sprite "
+                    "extraction. Keep character prompts 100% character-only."
+                ),
             },
         ]
     )
