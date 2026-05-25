@@ -55,6 +55,10 @@ SHEETS = [
         FIXTURES / "sheet_iwan_anime_with_prop.png",
         id="iwan_anime_one_pose_with_stone_prop",
     ),
+    pytest.param(
+        FIXTURES / "sheet_vera_uneven_spacing.png",
+        id="vera_uneven_figure_spacing",
+    ),
 ]
 
 
@@ -175,3 +179,52 @@ def test_sprites_have_reasonable_dimensions(sheet_path):
         W, H = sprite.size
         assert W >= 100, f"sprite_{i}.png from {sheet_path.name} is too narrow: {W}px"
         assert H >= 300, f"sprite_{i}.png from {sheet_path.name} is too short: {H}px"
+
+
+@pytest.mark.parametrize("sheet_path", SHEETS)
+def test_sprites_have_human_aspect_ratio(sheet_path):
+    """Every sprite has height/width < 5.5.
+
+    A full human figure ranges from ~2.5:1 to ~4:1 tall-to-wide depending on
+    pose (arms-out is widest, arms-tight-at-sides is narrowest). 5.5:1 would
+    mean we're rendering a half-figure or worse — caught the Vera
+    boundary-cut regression where some poses came out 107×683 ≈ 6.4:1.
+    Tolerant enough that even a very narrow legitimate pose (Vera-smiling
+    at 191×683 ≈ 3.6:1) passes, but mis-slicing fails.
+    """
+    sprites = _extract(sheet_path)
+    for i, sprite in enumerate(sprites, 1):
+        W, H = sprite.size
+        ratio = H / max(W, 1)
+        assert ratio < 5.5, (
+            f"sprite_{i}.png from {sheet_path.name} has bad aspect ratio "
+            f"{H}/{W} = {ratio:.2f} — the figure was probably sliced down "
+            "the middle by a misplaced band boundary"
+        )
+
+
+@pytest.mark.parametrize("sheet_path", SHEETS)
+def test_sprites_have_content_on_both_sides(sheet_path):
+    """The figure spans the centre column of its sprite.
+
+    Specifically: there must be at least one non-transparent pixel in BOTH
+    the left half AND the right half of the sprite. Catches the case where
+    a band boundary chopped a figure vertically and we only kept one side
+    — the resulting sprite would have content on one side and emptiness on
+    the other, even if its width happened to pass the dimension check.
+    """
+    sprites = _extract(sheet_path)
+    for i, sprite in enumerate(sprites, 1):
+        W, H = sprite.size
+        alpha = sprite.split()[-1]
+        mid = W // 2
+        left = alpha.crop((0, 0, mid, H))
+        right = alpha.crop((mid, 0, W, H))
+        assert left.getextrema()[1] > 0, (
+            f"sprite_{i}.png from {sheet_path.name} has no content in its "
+            "left half — figure probably sliced and only the right kept"
+        )
+        assert right.getextrema()[1] > 0, (
+            f"sprite_{i}.png from {sheet_path.name} has no content in its "
+            "right half — figure probably sliced and only the left kept"
+        )
