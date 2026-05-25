@@ -48,6 +48,24 @@ export default function TypewriterText({ text, speed = 16, onDone, instant = fal
     onDone && onDone();
   };
 
+  // Space (or Enter) while the typewriter is running reveals the rest of the
+  // page instantly. Play.jsx's own keydown handler is gated on `pageDone` so
+  // the two don't fight — this handles Space-while-typing; Play handles
+  // Space-when-done.
+  useEffect(() => {
+    if (done || instant) return;
+    const onKey = (e) => {
+      if (e.key !== " " && e.key !== "Enter") return;
+      const t = e.target;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
+      e.preventDefault();
+      skip();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [done, instant]);
+
   if (done) {
     return (
       <div
