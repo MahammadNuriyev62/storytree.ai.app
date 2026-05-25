@@ -151,10 +151,12 @@ Two paths produce the same end-state (a populated `Story.character_sprites`
    suffix + art_prompt` for backgrounds), calls `generate_image()`, runs
    `rembg/U²-Net` on each sprite sheet, writes to
    `static/images/.../{story_id}/`, writes the manifest onto the Story row.
-4. **Tolerance for N<5 extracted sprites**: if the extractor returns fewer
-   than 5 (a common failure when adjacent figures merge), the first N are
-   mapped to the first N expressions and any missing slot is filled from
-   `neutral`, with a warning logged. Never aborts the whole pipeline.
+4. **Defensive fallback when the extractor returns N<5 sprites**: legacy
+   safety net from the connected-components era. The current vertical-band
+   extractor always returns exactly 5 (deterministic slicing) so this branch
+   shouldn't fire in practice; keeping it for future-proofing in case the
+   model produces a sheet with significantly different layout. Missing
+   slots get filled from `neutral` with a warning.
 5. Mock-mode (`IMAGE_MOCK=1`) skips sprite extraction — placeholder PNGs are
    written directly to each expression slot so wiring can be smoke-tested
    without spending budget.
@@ -246,7 +248,7 @@ mocked at the `chatbot.prompt(...)` boundary via `tests/fakes.py::FakeChatBot`
 — no network, no API key. `conftest.py` rewires `DB_NAME` to a tempdir BEFORE
 importing the app so each test session gets a fresh SQLite.
 
-What's covered (33 tests):
+What's covered (45 tests):
 - `test_create_story` — root scene + root choice wiring.
 - `test_cache` — re-fetching a materialised scene triggers 0 LLM calls.
 - `test_recursion` — branch generation creates child scenes + choices.
@@ -255,9 +257,16 @@ What's covered (33 tests):
   applies a costlier delta than a normal choice.
 - `test_tree_invariants` — exactly one root scene per story, no orphan choices.
 - `test_api_contract` — DTO shape for the SPA.
+- `test_sprite_extractor` — parameterised regression tests over two
+  committed sprite-sheet fixtures (`tests/fixtures/`): asserts exactly 5
+  sprites returned, head present in top 15%, feet present in bottom 15%,
+  corner alpha < 20 (rembg actually removed bg), no two sprites identical,
+  reasonable per-sprite dimensions. ~46s of CPU rembg work — slow but
+  protects against the headless-sprite and merged-figure regressions
+  we've actually shipped.
 
 CI: `pytest -m "not llm" -q` (the `llm` marker is reserved for real-API smoke
-tests we never run in CI).
+tests we never run in CI). The sprite-extractor tests run by default.
 
 ## Conventions / gotchas
 
@@ -265,8 +274,10 @@ tests we never run in CI).
   Use `scripts/dev_migrate.py` when adding columns, not `alembic`.
 - **`dev_fixtures/`** holds source PNGs the author uploaded; `static/images/`
   holds derived sprites/backgrounds served by FastAPI. Both are committed
-  for stories 2 (hand-curated), 3, and 4 (both auto-gen) so contributors
-  can boot the app without regenerating.
+  for stories 2 (hand-curated), 3, 4, and 5 (all auto-gen) so contributors
+  can boot the app without regenerating. (Note: the Story rows themselves
+  live in the local-only `database.db`; if you clone fresh, the static art
+  is there but the stories aren't until you re-create them.)
 - **Re-generating one character's sprite** (the workflow we ran for Hannah
   in story 4 after a bad extraction): edit that character's `art_prompt`
   in the Story row's `characters` JSON column, call
@@ -304,17 +315,18 @@ tests we never run in CI).
   dominant setting rather than transitioning page-by-page. The token works
   end-to-end (frontend swaps the background mid-scene) but needs prompt
   iteration to be reliably exercised.
-- **Sprite extractor merges adjacent figures.** `sprite_extractor.py`
-  uses connected components on a colour-distance mask. Two recurring
-  failure modes: (a) lighting/scene language slips into the character
-  `art_prompt` and the model paints a backdrop into the sheet that
-  bridges two figures into one bbox; (b) photorealistic prompts or
-  props that touch the floor (a bar, a table, dragging shadows) do the
-  same. Current code: prompt rule + defensive template suffix + N<5
-  tolerance with `neutral` fallback. Next-level escalations not yet
-  implemented: switch extractor to fixed vertical-band slicing
-  (deterministic, free), or per-pose generation (5× cost per character,
-  zero merge risk).
+- **Sprite extractor: connected-components retired.** `sprite_extractor.py`
+  used to use connected components on a colour-distance mask. Two failure
+  modes drove its replacement: (a) lighting/scene language painted backdrops
+  that merged adjacent figures into one bbox (Hannah, story 4); (b) a
+  character wearing a white shirt against the white sheet background made
+  their head a disconnected mask island that fell below the area threshold,
+  yielding headless sprites (Musa, story 5). Both fixed by switching to
+  fixed vertical-band slicing — we know the sheet is 5 equal-width figures
+  left-to-right, so we just split into 5 bands and rembg each. Guarded by
+  the regression tests in `tests/test_sprite_extractor.py`. The only
+  remaining premium escalation not implemented: per-pose generation (5×
+  cost per character, zero merge risk, sharper individual frames).
 - **Sprite layout is fixed.** Three slots (left/center/right) hard-coded in
   `Stage.jsx`. Two characters in the same slot would stack. Workable for the
   current "≤2 NPCs at a time" prompt rule; would need rethinking for crowd
