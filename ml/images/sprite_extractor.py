@@ -64,6 +64,30 @@ def _get_rembg_session():
     return _REMBG_SESSION
 
 
+def _crop_to_content(rgba: Image.Image, alpha_threshold: int = 10, pad: int = 6) -> Image.Image:
+    """Crop the image to the bounding box of its non-transparent content.
+
+    Nano Banana doesn't always center the figure within its band, so naive
+    fixed-width slicing produces sprites with the character pushed left or
+    right and lots of empty space on the other side. The SPA's
+    bottom-anchor positioning hides that visually, but it inflates file
+    size and makes the sprite read as off-balance in any tool that shows
+    the PNG's natural bounds. Trim to the alpha bbox with a small padding.
+    """
+    arr = np.array(rgba)
+    if arr.shape[-1] != 4:
+        return rgba
+    alpha = arr[:, :, 3]
+    ys, xs = np.where(alpha > alpha_threshold)
+    if len(ys) == 0:
+        return rgba
+    y0 = max(0, int(ys.min()) - pad)
+    y1 = min(arr.shape[0], int(ys.max()) + pad + 1)
+    x0 = max(0, int(xs.min()) - pad)
+    x1 = min(arr.shape[1], int(xs.max()) + pad + 1)
+    return Image.fromarray(arr[y0:y1, x0:x1])
+
+
 def _keep_largest_component(rgba: Image.Image, alpha_threshold: int = 30) -> Image.Image:
     """Zero out every non-largest connected foreground component in the alpha.
 
@@ -130,7 +154,7 @@ def extract_sprites_from_sheet(
     session = _get_rembg_session()
     sprite_buffers: List[Tuple[str, bytes]] = []
     for i, band in _slice_into_bands(sheet, n_poses, label_strip_px):
-        cutout = _keep_largest_component(remove(band, session=session))
+        cutout = _crop_to_content(_keep_largest_component(remove(band, session=session)))
         buf = io.BytesIO()
         cutout.save(buf, format="PNG")
         sprite_buffers.append((f"sprite_{i + 1}.png", buf.getvalue()))
