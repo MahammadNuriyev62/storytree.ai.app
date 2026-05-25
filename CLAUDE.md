@@ -295,21 +295,29 @@ tests we never run in CI). The sprite-extractor tests run by default.
 - **Page-1 stage rule** — `stage.characters_present` and `stage.setting` are
   the page-1 snapshot. Anything later is driven by `{{enter:}}` / `{{setting:}}`
   tokens. The frontend reconciles contradictions; the prompt forbids them.
-- **No carry-over across scenes** — each generated scene starts with its own
-  `stage.characters_present` (the model decides afresh). If a character was
-  on stage at the end of scene N but the model omits them from N+1's roster,
-  they vanish — see "Known limitations".
+- **Cross-scene carry-over** — the next-scene prompt gets a "CONTINUITY HINT"
+  computed by `generate._end_of_scene_state(scene)`, which replays the
+  previous scene's inline `{{enter}}` / `{{exit}}` / `{{expression}}` /
+  `{{setting}}` tokens against its starting stage to figure out who is on
+  stage / where at the very last beat. The model is told to honour the hint
+  unless its new prose is a deliberate time skip or location change. The
+  hint is best-effort (the LLM can still ignore it); the FastAPI sanitiser
+  in `_sanitize_stage` is the hard backstop.
 - **No mocks in image-gen tests** — image work is excluded from the pytest
   net because it requires the Gemini SDK + a real-or-mock API key. Manual
   validation via `python -m ml.images.lighthouse_assets <story_id>`.
 
 ## Known limitations
 
-- **Cross-scene character continuity.** When scene N ends with Iwan on stage
-  and scene N+1's prose continues that conversation, the model sometimes
-  leaves N+1's `characters_present` empty — so the sprite vanishes
-  mid-conversation. Possible fix: feed the prior scene's end-of-text roster
-  to the prompt as "characters likely still on stage."
+- **Cross-scene character continuity (mitigated, not eliminated).** When
+  scene N ended with Iwan on stage and scene N+1's prose continued the
+  conversation, the model would frequently leave N+1's `characters_present`
+  empty and the sprite would vanish mid-conversation. Now mitigated by the
+  per-scene CONTINUITY HINT injected from `_end_of_scene_state` (see
+  Conventions). The hint is best-effort — the LLM can still ignore it on
+  any given turn, and there is no second LLM pass to validate. If you hit
+  a recurrence, the safest fix is still to patch the offending `Scene.stage`
+  directly in the DB.
 - **Model under-uses `{{setting:X}}`.** When prose crosses locations
   (cottage → cliff path → lighthouse door), the model often picks one
   dominant setting rather than transitioning page-by-page. The token works
