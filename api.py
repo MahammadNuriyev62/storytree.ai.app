@@ -24,6 +24,23 @@ heavy_weight_chatbot = ChatBot(model_name="o4-mini")
 router = APIRouter()
 
 
+def _normalize_roster(raw) -> list[dict]:
+    """Coerce a `characters_present` list into the canonical [{name, expression}].
+
+    The metadata generator occasionally emits bare strings — observed for
+    story 7's root scene, where `["Elena Ferri"]` made the frontend look up
+    `(undefined).name` and silently drop the sprite. Bare strings become
+    `{name, expression: "neutral"}`; anything else non-dict is discarded.
+    """
+    out: list[dict] = []
+    for entry in raw or []:
+        if isinstance(entry, str):
+            out.append({"name": entry, "expression": "neutral"})
+        elif isinstance(entry, dict) and entry.get("name"):
+            out.append(entry)
+    return out
+
+
 def _sanitize_stage(stage: Optional[dict], story: Story) -> Optional[dict]:
     """Drop any stage values that don't match the story's asset manifest.
 
@@ -40,11 +57,9 @@ def _sanitize_stage(stage: Optional[dict], story: Story) -> Optional[dict]:
 
     valid_expressions = {"angry", "sad", "smiling", "neutral", "scared"}
     cleaned_chars = []
-    for entry in stage.get("characters_present") or []:
-        if not isinstance(entry, dict):
-            continue
+    for entry in _normalize_roster(stage.get("characters_present")):
         name = entry.get("name")
-        expr = entry.get("expression")
+        expr = entry.get("expression") or "neutral"
         if name in sprites_map and expr in valid_expressions:
             cleaned_chars.append({"name": name, "expression": expr})
 
@@ -100,10 +115,19 @@ async def create_story(data: CreateStory):
 
         # Seed the opening scene's stage so the first page already has a
         # background image when art has been generated. Prefer the explicit
-        # `stage` from the metadata generator; otherwise fall back to the
-        # first available setting id.
+        # `stage` from the metadata generator; normalise the shape (the
+        # generator occasionally emits bare strings for characters_present;
+        # see _normalize_roster) but skip the manifest-validation step in
+        # _sanitize_stage — the manifest doesn't exist yet at create-time.
         first_scene_data = story_metadata["first_introduction_scene"]
         explicit_stage = first_scene_data.get("stage")
+        if isinstance(explicit_stage, dict):
+            explicit_stage = {
+                "setting": explicit_stage.get("setting"),
+                "characters_present": _normalize_roster(
+                    explicit_stage.get("characters_present")
+                ),
+            }
         fallback_setting = (settings_list[0].get("id") if settings_list else None)
         root_stage = explicit_stage or (
             {"setting": fallback_setting, "characters_present": []}
