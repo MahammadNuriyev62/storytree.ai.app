@@ -88,14 +88,23 @@ def _crop_to_content(rgba: Image.Image, alpha_threshold: int = 10, pad: int = 6)
     return Image.fromarray(arr[y0:y1, x0:x1])
 
 
-def _keep_largest_component(rgba: Image.Image, alpha_threshold: int = 30) -> Image.Image:
-    """Zero out every non-largest connected foreground component in the alpha.
+def _drop_adjacent_band_intrusions(
+    rgba: Image.Image, alpha_threshold: int = 30
+) -> Image.Image:
+    """Keep the main figure + anything horizontally overlapping with it.
 
-    Nano Banana doesn't always place the 5 figures at exactly the spacing our
-    fixed-width band slicer assumes — sometimes a band picks up a sliver of
-    the adjacent pose (a shoulder, a hand, a skirt edge). After rembg those
-    appear as small extra blobs in the alpha mask. Treat the band as a
-    single-figure render and keep only the biggest foreground island.
+    rembg/U²-Net produces a clean foreground mask, but anti-aliased
+    transitions (a bishop sleeve narrowing to the wrist, a head joined
+    by the thin slice of neck) can break the figure into multiple
+    connected components. A naive "keep the largest" drops the body's
+    sleeves, head, or other limbs whenever they happen to be disjoint
+    in the mask. Observed on Vera (story 6) — her bishop sleeves were
+    dropped, leaving only her narrow torso-and-skirt strip.
+
+    The fix: find the largest component (the figure's body), then keep
+    every other component whose horizontal bbox overlaps with it.
+    Components horizontally separated from the body are almost always
+    intrusions from an adjacent pose's band — those get dropped.
     """
     arr = np.array(rgba)
     if arr.shape[-1] != 4:
@@ -103,11 +112,21 @@ def _keep_largest_component(rgba: Image.Image, alpha_threshold: int = 30) -> Ima
     mask = (arr[:, :, 3] > alpha_threshold).astype(np.uint8)
     n_comp, labels, stats, _ = cv2.connectedComponentsWithStats(mask, connectivity=8)
     if n_comp <= 2:
-        # Just background + one component (or nothing) — nothing to drop.
         return rgba
-    # stats[0] is the background label. Pick the largest of the remaining.
-    largest_label = 1 + int(np.argmax(stats[1:, cv2.CC_STAT_AREA]))
-    keep = labels == largest_label
+
+    # stats columns: LEFT, TOP, WIDTH, HEIGHT, AREA
+    largest = 1 + int(np.argmax(stats[1:, cv2.CC_STAT_AREA]))
+    lx0 = int(stats[largest, cv2.CC_STAT_LEFT])
+    lx1 = lx0 + int(stats[largest, cv2.CC_STAT_WIDTH])
+
+    keep = np.zeros_like(mask, dtype=bool)
+    for i in range(1, n_comp):
+        cx0 = int(stats[i, cv2.CC_STAT_LEFT])
+        cx1 = cx0 + int(stats[i, cv2.CC_STAT_WIDTH])
+        # Overlap if the x-intervals intersect at all.
+        if i == largest or (cx0 < lx1 and cx1 > lx0):
+            keep |= labels == i
+
     arr[:, :, 3] = arr[:, :, 3] * keep
     return Image.fromarray(arr)
 
@@ -154,7 +173,7 @@ def extract_sprites_from_sheet(
     session = _get_rembg_session()
     sprite_buffers: List[Tuple[str, bytes]] = []
     for i, band in _slice_into_bands(sheet, n_poses, label_strip_px):
-        cutout = _crop_to_content(_keep_largest_component(remove(band, session=session)))
+        cutout = _crop_to_content(_drop_adjacent_band_intrusions(remove(band, session=session)))
         buf = io.BytesIO()
         cutout.save(buf, format="PNG")
         sprite_buffers.append((f"sprite_{i + 1}.png", buf.getvalue()))
