@@ -30,8 +30,8 @@ if IS_PROD:
     app.add_middleware(
         TrustedHostMiddleware,
         allowed_hosts=[
-            "storytree.up.railway.app",  # your canonical hostname
-            "*.storytree.up.railway.app",  # optional wild-card sub-domains
+            "storytree-production.up.railway.app",  # canonical Railway hostname
+            "*.up.railway.app",  # preview deploys + alt subdomains
             "127.0.0.1",
             "localhost",  # keep these for health checks, etc.
         ],
