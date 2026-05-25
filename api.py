@@ -12,7 +12,13 @@ from generate import (
 from db_models import Story, Scene, Choice, engine
 from models import CreateStory, SceneDto, StoriesDto, StoryDetailsDto
 
-light_weight_chatbot = ChatBot()
+# Both story-creation AND per-scene narrative now go through Sonnet 4.6.
+# We used to keep scenes on Haiku 4.5 for snappiness; the trade-off no longer
+# made sense once stories with literary register (L'Étranger, The Lighthouse
+# in Winter) landed — Sonnet's prose density, character voice, and
+# world-state continuity are noticeably better per scene. ~2-3× slower per
+# click (15-30s vs 5-15s), but the user is reading slowly anyway.
+light_weight_chatbot = ChatBot(model_name="o4-mini")
 heavy_weight_chatbot = ChatBot(model_name="o4-mini")
 
 router = APIRouter()
