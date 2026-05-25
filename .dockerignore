@@ -3,3 +3,19 @@ __pycache__/
 *.db
 .git
 .env
+
+# Dev/test artifacts not needed at runtime.
+.image_cache/
+dev_fixtures/
+tests/
+.pytest_cache/
+.image_costs.jsonl
+
+# Frontend source isn't copied — the built SPA comes from the frontend stage.
+frontend/node_modules/
+frontend/dist/
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store

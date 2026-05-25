@@ -7,24 +7,31 @@ COPY frontend/ ./
 # vite build outputs to ../static/app (see frontend/vite.config.js) -> /static/app
 RUN npm run build
 
-# --- Stage 2: Python app ---
+# --- Stage 2: Python app + Claude Code CLI ---
 FROM python:3.12-slim
 
-# Prevent Python from writing .pyc files and enable unbuffered logs
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-# Install deps first for better layer caching
+# Node 22 + the Claude Code CLI. The app's ChatBot shells out to `claude -p`
+# so we need it on PATH; auth lives in /root/.claude and is persisted via a
+# Railway volume mounted at /data (see entrypoint.sh).
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends curl ca-certificates \
+ && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+ && apt-get install -y --no-install-recommends nodejs \
+ && npm install -g @anthropic-ai/claude-code \
+ && apt-get clean && rm -rf /var/lib/apt/lists/*
+
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of the source
 COPY . .
-
-# Bring in the built SPA from the frontend stage
 COPY --from=frontend /static/app ./static/app
 
+RUN chmod +x /app/entrypoint.sh
+
 EXPOSE 8000
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+ENTRYPOINT ["/app/entrypoint.sh"]
