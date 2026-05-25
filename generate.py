@@ -1,5 +1,6 @@
 import json
-from typing import List, Tuple
+import re
+from typing import List, Optional, Tuple
 from chatbots.chatbot import ChatBot
 from db_models import Choice, Scene, Story
 
@@ -302,6 +303,61 @@ OUTPUT_SCHEMA = (
 )
 
 
+# Matches the inline stage tokens in scene prose: {{enter:X}}, {{enter:X/expr}},
+# {{exit:X}}, {{expression:X/expr}}, {{setting:X}}. Order-preserving via finditer.
+_STAGE_TOKEN_RE = re.compile(r"\{\{(enter|exit|expression|setting):([^}]+)\}\}")
+
+
+def _end_of_scene_state(scene: Scene) -> Tuple[List[dict], Optional[str]]:
+    """Replay a scene's inline tokens to compute who is on stage / where, at the
+    very end of the scene's text.
+
+    The model is given this as a continuity hint when generating the NEXT scene,
+    so it doesn't drop characters who were clearly mid-conversation. Without
+    this, the model frequently emits an empty `characters_present` for scene
+    N+1 even when its prose continues seamlessly from scene N (the "Known
+    limitation" called out in CLAUDE.md).
+    """
+    if not scene or not scene.stage or not scene.text:
+        return [], None
+    roster: List[dict] = []
+    for entry in (scene.stage.get("characters_present") or []):
+        if isinstance(entry, str):
+            roster.append({"name": entry, "expression": "neutral"})
+        elif isinstance(entry, dict) and entry.get("name"):
+            roster.append({
+                "name": entry["name"],
+                "expression": entry.get("expression") or "neutral",
+            })
+    setting = scene.stage.get("setting")
+
+    for m in _STAGE_TOKEN_RE.finditer(scene.text):
+        kind, body = m.group(1), m.group(2).strip()
+        if kind == "setting":
+            if body:
+                setting = body
+        elif kind == "enter":
+            name, _, expr = body.partition("/")
+            name = name.strip()
+            expr = expr.strip() or "neutral"
+            if not name:
+                continue
+            roster = [r for r in roster if r["name"] != name]
+            roster.append({"name": name, "expression": expr})
+        elif kind == "exit":
+            name = body.strip()
+            roster = [r for r in roster if r["name"] != name]
+        elif kind == "expression":
+            name, _, expr = body.partition("/")
+            name, expr = name.strip(), expr.strip()
+            if not name or not expr:
+                continue
+            for r in roster:
+                if r["name"] == name:
+                    r["expression"] = expr
+    return roster, setting
+
+
 def _stage_block(story: Story) -> str:
     """Build the 'available settings + characters' prompt section, or '' if the
     story has no manifest. The model is told to pick STRICTLY from these lists
@@ -339,6 +395,13 @@ def _stage_block(story: Story) -> str:
             "NOT be in `stage.characters_present` — the enter token means they walk on "
             "at that moment, so they can't also be there from the start. If the "
             "protagonist is alone before anyone arrives, leave `characters_present` empty.\n"
+            "  - CONTINUITY ACROSS SCENES: if your new scene's prose continues "
+            "directly from where the previous scene left off (same room, no time skip, "
+            "conversation still active), `stage.characters_present` MUST include "
+            "whoever was on stage at the end of that previous scene — otherwise the "
+            "sprite vanishes mid-conversation. The per-scene CONTINUITY HINT below "
+            "tells you who and where; honour it unless your prose explicitly moves "
+            "the camera elsewhere or skips ahead in time.\n"
             "  - If the scene's prose crosses LOCATIONS (e.g. cottage -> path -> "
             "lighthouse), `stage.setting` is the FIRST location and you MUST drop "
             "`{{setting:X}}` tokens to swap the background as the prose moves. Don't "
@@ -515,6 +578,33 @@ async def continue_story_branch(
                 f"{difficulty} difficulty (costly, not deadly). If the story is reaching its natural "
                 'climax/resolution, mark a concluding choice with "is_final": true.'
             )
+    # Continuity hint: tell the model who was on stage / where at the end of
+    # the previous scene so it doesn't accidentally drop the cast. See
+    # _end_of_scene_state. Only emitted when the story has a manifest (no
+    # point hinting about sprites in an unvisualised story).
+    if (story.character_sprites or story.backgrounds) and scenes:
+        roster_end, setting_end = _end_of_scene_state(scenes[-1])
+        if roster_end or setting_end:
+            hint_parts = []
+            if roster_end:
+                hint_parts.append(
+                    "on stage: "
+                    + ", ".join(f"{r['name']} ({r['expression']})" for r in roster_end)
+                )
+            if setting_end:
+                hint_parts.append(f"setting: {setting_end}")
+            instruction = (
+                "CONTINUITY HINT — at the very end of the previous scene, "
+                + "; ".join(hint_parts)
+                + ". If your new scene continues seamlessly (same beat, no "
+                "time skip), your stage.setting and stage.characters_present "
+                "should reflect that starting point — NOT empty. If you DO "
+                "want a fresh beat (time skip, location change, characters "
+                "dispersed), pick the appropriate setting + roster and ignore "
+                "this hint.\n\n"
+                + instruction
+            )
+
     messages.append({"role": "user", "content": instruction})
 
     response = await chatbot.prompt(messages)
