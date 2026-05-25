@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { api } from "../api.js";
 import { moodFor, backgroundGradient, dangerLevel } from "../theme.js";
 import { parseScene } from "../pagination.js";
+import { saveProgress } from "../progress.js";
 import TypewriterText from "../components/TypewriterText.jsx";
 import Hud from "../components/Hud.jsx";
 import RelationshipsPanel from "../components/RelationshipsPanel.jsx";
@@ -107,6 +108,8 @@ export default function Play() {
     };
     if (cur.scene === want.scene && cur.page === want.page) return;
     setSearchParams(want, { replace: true });
+    // Persist the same beat to localStorage so the reader can resume.
+    saveProgress(id, scene.id, pageIndex + 1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scene && scene.id, pageIndex]);
 

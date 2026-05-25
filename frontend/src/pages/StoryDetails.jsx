@@ -1,15 +1,23 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api } from "../api.js";
+import { loadProgress, clearProgress } from "../progress.js";
 
 export default function StoryDetails() {
   const { id } = useParams();
   const [story, setStory] = useState(null);
   const [err, setErr] = useState(null);
+  const [progress, setProgress] = useState(null);
 
   useEffect(() => {
     api.getStory(id).then(setStory).catch((e) => setErr(String(e)));
+    setProgress(loadProgress(id));
   }, [id]);
+
+  const handleRestart = () => {
+    clearProgress(id);
+    setProgress(null);
+  };
 
   if (err) return <p className="text-red-300 text-center mt-10">{err}</p>;
   if (!story) return <p className="text-center text-white/50 mt-10">Loading…</p>;
@@ -51,12 +59,39 @@ export default function StoryDetails() {
           </div>
         )}
 
-        <Link
-          to={`/play/${story.id}`}
-          className="inline-block px-6 py-3 rounded-xl font-bold bg-gradient-to-r from-purple-500 to-pink-500 hover:scale-105 transition"
-        >
-          ▶️ Begin the Adventure
-        </Link>
+        <div className="flex flex-wrap gap-3 items-center">
+          {progress ? (
+            <>
+              <Link
+                to={`/play/${story.id}?scene=${progress.sceneId}&page=${progress.page}`}
+                className="inline-block px-6 py-3 rounded-xl font-bold bg-gradient-to-r from-purple-500 to-pink-500 hover:scale-105 transition"
+              >
+                ▶️ Continue — scene {progress.sceneId} · page {progress.page}
+              </Link>
+              <button
+                onClick={handleRestart}
+                className="inline-block px-4 py-3 rounded-xl text-sm dark-glass hover:scale-105 transition"
+                title="Forget saved progress and start over"
+              >
+                ↻ Restart from beginning
+              </button>
+            </>
+          ) : (
+            <Link
+              to={`/play/${story.id}`}
+              className="inline-block px-6 py-3 rounded-xl font-bold bg-gradient-to-r from-purple-500 to-pink-500 hover:scale-105 transition"
+            >
+              ▶️ Begin the Adventure
+            </Link>
+          )}
+          <Link
+            to={`/story/${story.id}/tree`}
+            className="inline-block px-4 py-3 rounded-xl text-sm dark-glass hover:scale-105 transition"
+            title="See every scene and choice as a graph"
+          >
+            🌳 Story map
+          </Link>
+        </div>
       </div>
     </div>
   );
