@@ -19,6 +19,33 @@ const POSITION_LEFT_PCT = {
   right: 62,
 };
 
+// When multiple sprites resolve to the SAME anchor — which happens whenever
+// the story has more than 3 characters and the metadata generator had to
+// double up positions (observed on story 7, where Céline and Francesca both
+// landed at `right`) — spread them around the anchor instead of stacking.
+// 12% is roughly the sprite width, so two sprites in the same slot read as
+// "next to each other" rather than "overlapping" while still staying inside
+// the slot's natural visual band.
+const COLLISION_SPREAD_PCT = 12;
+
+function spreadCollisions(sprites) {
+  const byAnchor = new Map();
+  sprites.forEach((s, i) => {
+    if (!byAnchor.has(s.leftPct)) byAnchor.set(s.leftPct, []);
+    byAnchor.get(s.leftPct).push(i);
+  });
+  const out = sprites.map((s) => ({ ...s }));
+  for (const [anchor, idxs] of byAnchor) {
+    if (idxs.length <= 1) continue;
+    const spread = (idxs.length - 1) * COLLISION_SPREAD_PCT;
+    const start = anchor - spread / 2;
+    idxs.forEach((idx, k) => {
+      out[idx].leftPct = start + k * COLLISION_SPREAD_PCT;
+    });
+  }
+  return out;
+}
+
 export default function Stage({
   setting,
   characters,
@@ -31,24 +58,26 @@ export default function Stage({
       : null;
 
   // Resolve each present character to {url, position, key}; drop unknowns.
-  const sprites = (characters || [])
-    .map((c, i) => {
-      const meta = characterSprites && characterSprites[c.name];
-      if (!meta) return null;
-      const url =
-        meta.expressions &&
-        (meta.expressions[c.expression] || meta.expressions.neutral);
-      if (!url) return null;
-      return {
-        // Key by name + expression so a mood swap re-animates, but identity
-        // is preserved when the same character stays put.
-        key: `${c.name}-${c.expression || "neutral"}`,
-        name: c.name,
-        url,
-        leftPct: POSITION_LEFT_PCT[meta.position] ?? 50,
-      };
-    })
-    .filter(Boolean);
+  const sprites = spreadCollisions(
+    (characters || [])
+      .map((c, i) => {
+        const meta = characterSprites && characterSprites[c.name];
+        if (!meta) return null;
+        const url =
+          meta.expressions &&
+          (meta.expressions[c.expression] || meta.expressions.neutral);
+        if (!url) return null;
+        return {
+          // Key by name + expression so a mood swap re-animates, but identity
+          // is preserved when the same character stays put.
+          key: `${c.name}-${c.expression || "neutral"}`,
+          name: c.name,
+          url,
+          leftPct: POSITION_LEFT_PCT[meta.position] ?? 50,
+        };
+      })
+      .filter(Boolean)
+  );
 
   return (
     <div className="stage-layer">
