@@ -1,0 +1,6 @@
+-r requirements.txt
+# Test toolchain
+pytest==9.0.3
+pytest-asyncio==1.3.0
+httpx==0.28.1            # used by fastapi.testclient
+python-multipart==0.0.29 # required to import the /extract-sprites form route

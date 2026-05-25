@@ -1,0 +1,109 @@
+:root {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100%;
+  background: #0a0f1f;
+  color: #f5f3ff;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Glassmorphism, matching the original StoryTree look */
+.glass {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
+.dark-glass {
+  background: rgba(0, 0, 0, 0.32);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Animated background transitions when the mood changes */
+.scene-bg {
+  transition: background 1.2s ease;
+}
+
+/* Red danger vignette overlay (opacity is data-driven) */
+.vignette {
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(
+    120% 90% at 50% 50%,
+    transparent 55%,
+    rgba(120, 0, 0, 0.55) 100%
+  );
+  transition: opacity 1s ease;
+  z-index: 5;
+}
+
+/* Pulse used for the keeper/danger states */
+@keyframes softpulse {
+  0%, 100% { opacity: 0.85; }
+  50% { opacity: 1; }
+}
+
+.scene-prose em { font-style: italic; color: #e9d5ff; }
+.scene-prose strong { font-weight: 700; color: #fff; }
+.scene-prose p { margin: 0 0 0.9rem; }
+.scene-prose p:last-child { margin-bottom: 0; }
+
+/* Thin scrollbars for side panels */
+.panel-scroll::-webkit-scrollbar { width: 6px; }
+.panel-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+/* --- VN-style stage layer (background + sprites) --- */
+.stage-layer {
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+}
+
+/* Full-cover background image; sits above the mood gradient. */
+.stage-bg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  opacity: 0.85;          /* lets the mood gradient bleed through a touch */
+}
+
+/* Dark scrim so the top header + scene card remain legible against any bg. */
+.stage-scrim {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(8, 6, 22, 0.55) 0%, rgba(8, 6, 22, 0.05) 35%, rgba(8, 6, 22, 0.55) 100%),
+    radial-gradient(120% 90% at 50% 50%, transparent 55%, rgba(8, 6, 22, 0.55) 100%);
+}
+
+/* Sprites are anchored to the bottom of the viewport, centered on their
+   percentage position. Height is capped so portraits don't dwarf the UI. */
+.stage-sprites {
+  position: absolute;
+  inset: 0;
+}
+.stage-sprites .sprite {
+  position: absolute;
+  bottom: 0;
+  transform: translateX(-50%);
+  max-height: 78vh;
+  width: auto;
+  filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.55));
+  user-select: none;
+  pointer-events: none;
+}

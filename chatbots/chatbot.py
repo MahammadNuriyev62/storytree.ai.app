@@ -1,1 +1,1 @@
-from .openai_chatbot import ChatBot
+from .claude_chatbot import ChatBot

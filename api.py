@@ -1,20 +1,50 @@
+import traceback
 from typing import Any, List, Optional, Tuple, cast
-from fastapi import APIRouter, File, HTTPException, Response, UploadFile
+from fastapi import APIRouter, BackgroundTasks, File, HTTPException, Response, UploadFile
 from sqlmodel import Session, select, exists
 from chatbots.chatbot import ChatBot
 from generate import (
+    EMPTY_STATE,
     continue_story_branch,
     generate_description,
     generate_story_metadata,
 )
 from db_models import Story, Scene, Choice, engine
-from ml.images.sprite_extractor import extract_sprites_from_sheet
 from models import CreateStory, SceneDto, StoriesDto, StoryDetailsDto
 
 light_weight_chatbot = ChatBot()
 heavy_weight_chatbot = ChatBot(model_name="o4-mini")
 
 router = APIRouter()
+
+
+def _sanitize_stage(stage: Optional[dict], story: Story) -> Optional[dict]:
+    """Drop any stage values that don't match the story's asset manifest.
+
+    The model is told the available settings + characters, but we still validate
+    server-side so a hallucinated key doesn't reach the SPA as a broken image.
+    """
+    if not stage or not isinstance(stage, dict):
+        return None
+    settings_map = story.backgrounds or {}
+    sprites_map = story.character_sprites or {}
+    setting = stage.get("setting")
+    if setting and setting not in settings_map:
+        setting = None
+
+    valid_expressions = {"angry", "sad", "smiling", "neutral", "scared"}
+    cleaned_chars = []
+    for entry in stage.get("characters_present") or []:
+        if not isinstance(entry, dict):
+            continue
+        name = entry.get("name")
+        expr = entry.get("expression")
+        if name in sprites_map and expr in valid_expressions:
+            cleaned_chars.append({"name": name, "expression": expr})
+
+    if not setting and not cleaned_chars:
+        return None
+    return {"setting": setting, "characters_present": cleaned_chars}
 
 
 @router.get("/stories/description")
@@ -29,6 +59,16 @@ async def create_story(data: CreateStory):
         heavy_weight_chatbot,
         data.description,
     )
+    initial_state = story_metadata.get("initial_state") or dict(EMPTY_STATE)
+    art_style = story_metadata.get("art_style")
+    settings_list = story_metadata.get("settings") or []
+    # If the LLM produced art prompts, mark the story as `pending` so the SPA
+    # can offer a "Generate art" button. Older metadata without art_prompts
+    # stays at the default "none".
+    has_any_art_prompt = bool(art_style) and (
+        any(c.get("art_prompt") for c in story_metadata.get("characters") or [])
+        or any(s.get("art_prompt") for s in settings_list)
+    )
     with Session(engine) as session:
         story = Story(
             # root_scene=scene1 # Link the root scene
@@ -42,15 +82,35 @@ async def create_story(data: CreateStory):
             n_scenes=data.n_scenes,
             emojis=story_metadata["emojis"],
             difficulty=data.difficulty,
+            initial_state=initial_state,
+            art_style=art_style,
+            settings=settings_list or None,
+            art_status="pending" if has_any_art_prompt else "none",
         )
         session.add(story)
         session.commit()
 
         story_id = cast(int, story.id)
 
+        # Seed the opening scene's stage so the first page already has a
+        # background image when art has been generated. Prefer the explicit
+        # `stage` from the metadata generator; otherwise fall back to the
+        # first available setting id.
+        first_scene_data = story_metadata["first_introduction_scene"]
+        explicit_stage = first_scene_data.get("stage")
+        fallback_setting = (settings_list[0].get("id") if settings_list else None)
+        root_stage = explicit_stage or (
+            {"setting": fallback_setting, "characters_present": []}
+            if fallback_setting else None
+        )
+
         root_scene = Scene(
-            text=story_metadata["first_introduction_scene"]["text"],
+            text=first_scene_data["text"],
             story_id=story_id,
+            state=initial_state,
+            state_changes=[],
+            pacing="setup",
+            stage=root_stage,
         )
 
         child_scene = Scene(
@@ -86,12 +146,32 @@ async def create_story(data: CreateStory):
 @router.get(
     "/stories/{story_id}/scene", response_model_by_alias=False, response_model=SceneDto
 )
-async def get_story(story_id: int, choice_id: Optional[int] = None):
+async def get_story(
+    story_id: int,
+    choice_id: Optional[int] = None,
+    scene_id: Optional[int] = None,
+):
     """
-    If choice_id is provided, return that Choice's next_scene.
-    Otherwise, return the Scene in this story that has no Choice.next_scene_id → it.
+    - scene_id  : direct lookup of an already-generated scene (for deep links).
+                  Must belong to this story and have non-null text.
+    - choice_id : return (or lazily generate) the Choice's next_scene.
+    - neither   : return the story's root scene (no incoming Choice.next_scene_id).
     """
     with Session(engine) as session:
+        if scene_id is not None:
+            scene = session.get(Scene, scene_id)
+            if (
+                scene is None
+                or scene.story_id != story_id
+                or scene.text is None
+            ):
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"no generated scene with id={scene_id} in story {story_id}",
+                )
+            _ = scene.choices
+            return scene
+
         if choice_id is None:
             stmt = (
                 select(Scene)
@@ -144,6 +224,10 @@ async def get_story(story_id: int, choice_id: Optional[int] = None):
         )
 
         scene.text = new_scene_json["text"]
+        scene.state = new_scene_json.get("state")
+        scene.state_changes = new_scene_json.get("state_changes", [])
+        scene.pacing = new_scene_json.get("pacing")
+        scene.stage = _sanitize_stage(new_scene_json.get("stage"), story)
         session.add(scene)
         session.commit()
         scene_id = cast(int, scene.id)
@@ -199,10 +283,74 @@ async def get_story_by_id(story_id: int):
         return story
 
 
+def _run_asset_generation(story_id: int) -> None:
+    """Background-task body — calls auto_gen and writes back the manifest.
+
+    Runs inside the BackgroundTask scheduler (no request context). All DB
+    work uses a fresh Session. Any exception is caught + logged + reflected
+    in `Story.art_status='failed'` so the SPA can surface a retry.
+    """
+    from ml.images.auto_gen import generate_story_assets
+
+    try:
+        with Session(engine) as session:
+            story = session.get(Story, story_id)
+            if story is None:
+                print(f"[generate_assets] story {story_id} vanished, abort")
+                return
+            manifest = generate_story_assets(story)
+            story.character_sprites = manifest["character_sprites"]
+            story.backgrounds = manifest["backgrounds"]
+            story.art_status = "ready"
+            session.add(story)
+            session.commit()
+            print(f"[generate_assets] story {story_id} → ready")
+    except Exception as e:
+        print(f"[generate_assets] story {story_id} FAILED: {e}")
+        traceback.print_exc()
+        with Session(engine) as session:
+            story = session.get(Story, story_id)
+            if story is not None:
+                story.art_status = "failed"
+                session.add(story)
+                session.commit()
+
+
+@router.post("/stories/{story_id}/generate_assets")
+async def trigger_asset_generation(story_id: int, background_tasks: BackgroundTasks):
+    """Kick off art generation for a story. Returns immediately.
+
+    Polls happen via `GET /stories/{id}` → `art_status`. Possible states:
+    `pending` (waiting), `generating` (in progress), `ready` (done), `failed`.
+    """
+    with Session(engine) as session:
+        story = session.get(Story, story_id)
+        if story is None:
+            raise HTTPException(status_code=404, detail=f"no story {story_id}")
+        if story.art_status == "generating":
+            return {"status": "already generating", "art_status": story.art_status}
+        if not story.art_style or not (story.settings or story.characters):
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "story has no art prompts on record — re-create it so the "
+                    "metadata generator emits art_prompt/art_style/settings"
+                ),
+            )
+        story.art_status = "generating"
+        session.add(story)
+        session.commit()
+    background_tasks.add_task(_run_asset_generation, story_id)
+    return {"status": "queued", "art_status": "generating"}
+
+
 @router.post("/extract-sprites")
 async def extract_sprites(file: UploadFile = File(...)):
     """Extract sprites from uploaded image and return as zip."""
     try:
+        # Imported lazily so the app can boot without OpenCV installed.
+        from ml.images.sprite_extractor import extract_sprites_from_sheet
+
         # Read uploaded file
         contents = await file.read()
 
