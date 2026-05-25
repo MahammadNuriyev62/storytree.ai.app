@@ -135,6 +135,10 @@ Two paths produce the same end-state (a populated `Story.character_sprites`
    richly-detailed `art_prompt` fields per character + a top-level `settings`
    array with `art_prompt` per location + a top-level `art_style` string. See
    `story_example` in [generate.py](generate.py) for the schema shape.
+   **Critical rule baked into the prompt**: `characters[].art_prompt` MUST
+   describe ONLY the character (face, body, hair, clothing). Never include
+   lighting, environment, or scene context — those leak as backdrops in the
+   sprite sheet and break extraction (see "Known limitations").
 2. `Story.art_status` starts as `pending` whenever the metadata generator
    produced art prompts. The SPA / a script can `POST /generate_assets` to
    trigger generation; the endpoint kicks off a FastAPI `BackgroundTask` and
@@ -142,14 +146,19 @@ Two paths produce the same end-state (a populated `Story.character_sprites`
    (or `failed`).
 3. The background task ([ml/images/auto_gen.py](ml/images/auto_gen.py))
    composes the full prompt per asset (`art_style + art_prompt + fixed
-   pose-grid scaffolding` for sprites; `art_style + bg suffix + art_prompt`
-   for backgrounds), calls `generate_image()`, runs `rembg/U²-Net` on each
-   sprite sheet, writes to `static/images/.../{story_id}/`, writes the
-   manifest onto the Story row.
-4. Mock-mode (`IMAGE_MOCK=1`) skips sprite extraction — placeholder PNGs are
+   pose-grid scaffolding` for sprites — the scaffolding ends with a
+   defensive "IGNORE any lighting/background context above"; `art_style + bg
+   suffix + art_prompt` for backgrounds), calls `generate_image()`, runs
+   `rembg/U²-Net` on each sprite sheet, writes to
+   `static/images/.../{story_id}/`, writes the manifest onto the Story row.
+4. **Tolerance for N<5 extracted sprites**: if the extractor returns fewer
+   than 5 (a common failure when adjacent figures merge), the first N are
+   mapped to the first N expressions and any missing slot is filled from
+   `neutral`, with a warning logged. Never aborts the whole pipeline.
+5. Mock-mode (`IMAGE_MOCK=1`) skips sprite extraction — placeholder PNGs are
    written directly to each expression slot so wiring can be smoke-tested
    without spending budget.
-5. Cost per story at current Nano-Banana Pro pricing (~$0.15/image): 3-4
+6. Cost per story at current Nano-Banana Pro pricing (~$0.15/image): 3-4
    character sheets + 4-6 backgrounds ≈ **$1.05-1.50**. The global
    `IMAGE_BUDGET_USD` cap (default $5) gates this — generation fails with
    `BudgetExceeded` if the next call would cross it.
@@ -255,8 +264,18 @@ tests we never run in CI).
 - **Don't lose `database.db`.** Local SQLite at the repo root — gitignored.
   Use `scripts/dev_migrate.py` when adding columns, not `alembic`.
 - **`dev_fixtures/`** holds source PNGs the author uploaded; `static/images/`
-  holds derived sprites/backgrounds served by FastAPI. Both are committed for
-  story 2 so contributors can boot the app without regenerating.
+  holds derived sprites/backgrounds served by FastAPI. Both are committed
+  for stories 2 (hand-curated), 3, and 4 (both auto-gen) so contributors
+  can boot the app without regenerating.
+- **Re-generating one character's sprite** (the workflow we ran for Hannah
+  in story 4 after a bad extraction): edit that character's `art_prompt`
+  in the Story row's `characters` JSON column, call
+  `build_sprite_prompt(char, art_style)` from `auto_gen.py`, then
+  `generate_image()` → `extract_sprites_from_sheet()` → write the 5
+  output PNGs to the same `static/images/sprites/{story_id}/{slug}-{expr}.png`
+  paths. The manifest URLs don't change, no Story row rewrite needed beyond
+  the characters JSON. Costs $0.15 (one image). See `/tmp/regen_hannah.py`
+  pattern.
 - **Scene tree invariants** — `Story` has exactly ONE scene with no incoming
   `Choice.next_scene_id` (the root). Wiping scenes mid-tree leaves orphans
   that break the root-finder query. When mass-deleting, also clear unreachable
@@ -285,6 +304,17 @@ tests we never run in CI).
   dominant setting rather than transitioning page-by-page. The token works
   end-to-end (frontend swaps the background mid-scene) but needs prompt
   iteration to be reliably exercised.
+- **Sprite extractor merges adjacent figures.** `sprite_extractor.py`
+  uses connected components on a colour-distance mask. Two recurring
+  failure modes: (a) lighting/scene language slips into the character
+  `art_prompt` and the model paints a backdrop into the sheet that
+  bridges two figures into one bbox; (b) photorealistic prompts or
+  props that touch the floor (a bar, a table, dragging shadows) do the
+  same. Current code: prompt rule + defensive template suffix + N<5
+  tolerance with `neutral` fallback. Next-level escalations not yet
+  implemented: switch extractor to fixed vertical-band slicing
+  (deterministic, free), or per-pose generation (5× cost per character,
+  zero merge risk).
 - **Sprite layout is fixed.** Three slots (left/center/right) hard-coded in
   `Stage.jsx`. Two characters in the same slot would stack. Workable for the
   current "≤2 NPCs at a time" prompt rule; would need rethinking for crowd
@@ -301,6 +331,7 @@ tests we never run in CI).
 | Understand the lazy-tree contract                 | [api.py](api.py) `get_story` + [generate.py](generate.py) `continue_story_branch` |
 | Add a new visualised story (auto)                 | Create via `POST /api/stories`, then `POST /stories/{id}/generate_assets`. Logic lives in [ml/images/auto_gen.py](ml/images/auto_gen.py). |
 | Add a new visualised story (hand-curated)         | [ml/images/lighthouse_assets.py](ml/images/lighthouse_assets.py) + [scripts/seed_lighthouse_story.py](scripts/seed_lighthouse_story.py) |
+| Re-extract / re-generate one character's sheet    | Edit `characters[].art_prompt` in the Story row; reuse `build_sprite_prompt` + `generate_image` + `extract_sprites_from_sheet`; write to the same `static/images/sprites/{story_id}/{slug}-{expr}.png`. See "Re-generating one character's sprite" in Conventions. |
 | Change what the metadata generator emits          | [generate.py](generate.py) `story_example` + `generate_story_metadata` prompt |
 | Change what the model emits per scene             | [generate.py](generate.py) `OUTPUT_SCHEMA` + `_stage_block` |
 | Change how a scene renders                        | [frontend/src/pages/Play.jsx](frontend/src/pages/Play.jsx) + [frontend/src/components/Stage.jsx](frontend/src/components/Stage.jsx) |
