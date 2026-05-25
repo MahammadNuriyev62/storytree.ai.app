@@ -40,6 +40,8 @@ import io
 import zipfile
 from typing import List, Tuple
 
+import cv2
+import numpy as np
 from PIL import Image
 from rembg import new_session, remove
 
@@ -60,6 +62,30 @@ def _get_rembg_session():
     if _REMBG_SESSION is None:
         _REMBG_SESSION = new_session("u2net")
     return _REMBG_SESSION
+
+
+def _keep_largest_component(rgba: Image.Image, alpha_threshold: int = 30) -> Image.Image:
+    """Zero out every non-largest connected foreground component in the alpha.
+
+    Nano Banana doesn't always place the 5 figures at exactly the spacing our
+    fixed-width band slicer assumes — sometimes a band picks up a sliver of
+    the adjacent pose (a shoulder, a hand, a skirt edge). After rembg those
+    appear as small extra blobs in the alpha mask. Treat the band as a
+    single-figure render and keep only the biggest foreground island.
+    """
+    arr = np.array(rgba)
+    if arr.shape[-1] != 4:
+        return rgba
+    mask = (arr[:, :, 3] > alpha_threshold).astype(np.uint8)
+    n_comp, labels, stats, _ = cv2.connectedComponentsWithStats(mask, connectivity=8)
+    if n_comp <= 2:
+        # Just background + one component (or nothing) — nothing to drop.
+        return rgba
+    # stats[0] is the background label. Pick the largest of the remaining.
+    largest_label = 1 + int(np.argmax(stats[1:, cv2.CC_STAT_AREA]))
+    keep = labels == largest_label
+    arr[:, :, 3] = arr[:, :, 3] * keep
+    return Image.fromarray(arr)
 
 
 def _slice_into_bands(
@@ -104,7 +130,7 @@ def extract_sprites_from_sheet(
     session = _get_rembg_session()
     sprite_buffers: List[Tuple[str, bytes]] = []
     for i, band in _slice_into_bands(sheet, n_poses, label_strip_px):
-        cutout = remove(band, session=session)
+        cutout = _keep_largest_component(remove(band, session=session))
         buf = io.BytesIO()
         cutout.save(buf, format="PNG")
         sprite_buffers.append((f"sprite_{i + 1}.png", buf.getvalue()))
