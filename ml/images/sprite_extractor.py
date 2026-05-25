@@ -1,14 +1,58 @@
-import cv2
-import numpy as np
-import zipfile
-from PIL import Image
-import io
+"""Extract individual sprites from a 5-pose horizontal sprite sheet.
 
+We KNOW the sheet's structure (our generator prompt guarantees it):
+- Exactly 5 figures, left-to-right
+- Roughly equal horizontal spacing
+- Plain pure-white background
+- Optional label strip ("ANGRY / SAD / SMILING / NEUTRAL / SCARED") at the
+  bottom of the sheet (Nano Banana sometimes adds it)
+
+Given that, the robust approach is **fixed vertical-band slicing**: divide
+the sheet into 5 equal-width vertical bands, crop a few pixels off the bottom
+to remove the label strip, run rembg/U²-Net on each band as one figure.
+
+We deliberately do NOT use connected-components on a color-distance mask
+anymore. That approach had two known failure modes we hit in real-world use:
+
+  1. **Lighting/scene bleed across figures** (e.g. a fireplace painted behind
+     pose 1 reaches into pose 2's foreground in the mask) — two figures
+     merge into one bbox; we get 4 sprites instead of 5 and the rest of
+     the expression mapping shifts.
+
+  2. **Head-body disconnection** when a character wears a white shirt on the
+     white background (e.g. Musa in story 5). The shirt is indistinguishable
+     from the background in the mask, so the face becomes an isolated island
+     connected to the torso only via the thin slice of neck skin. The
+     morphological close can't bridge it; the head component falls below
+     the area threshold and gets filtered out. Result: every sprite of that
+     character is headless from the neck down.
+
+Vertical-band slicing is immune to both: every band contains exactly one
+whole figure top-to-bottom, and rembg's U²-Net does the foreground extraction
+inside the band without any color-distance heuristic.
+
+Trade-off: this assumes the model produces 5 evenly-spaced figures. Our
+prompt asks for that explicitly ("equal spacing between each pose, clear
+gap between figures") so it holds in practice.
+"""
+
+import io
+import zipfile
+from typing import List, Tuple
+
+from PIL import Image
 from rembg import new_session, remove
 
 # Lazy-init the rembg ONNX session once per process (model is ~150MB,
-# downloaded on first use; subsequent inferences are ~0.5–2s per sprite on CPU).
+# downloaded on first use; subsequent inferences are ~0.5-2s per sprite on CPU).
 _REMBG_SESSION = None
+
+# Crop this many pixels off the bottom of the sheet before slicing, to remove
+# the optional "ANGRY / SAD / ..." label strip Nano Banana sometimes prints.
+DEFAULT_LABEL_STRIP_PX = 60
+
+# Number of poses we expect on every sheet.
+DEFAULT_N_POSES = 5
 
 
 def _get_rembg_session():
@@ -18,95 +62,55 @@ def _get_rembg_session():
     return _REMBG_SESSION
 
 
-def extract_sprites_from_sheet(image_bytes: bytes) -> bytes:
-    """
-    Extract sprites from a sprite sheet and return them as a zip file.
+def _slice_into_bands(
+    sheet: Image.Image,
+    n: int = DEFAULT_N_POSES,
+    label_strip_px: int = DEFAULT_LABEL_STRIP_PX,
+) -> List[Tuple[int, Image.Image]]:
+    """Return [(index, band_image), ...] — n equal-width vertical bands of the
+    sheet, with the bottom label strip cropped off."""
+    W, H = sheet.size
+    H_eff = max(1, H - label_strip_px)
+    band_w = W // n
+    bands = []
+    for i in range(n):
+        x0 = i * band_w
+        x1 = (i + 1) * band_w if i < n - 1 else W
+        bands.append((i, sheet.crop((x0, 0, x1, H_eff))))
+    return bands
+
+
+def extract_sprites_from_sheet(
+    image_bytes: bytes,
+    n_poses: int = DEFAULT_N_POSES,
+    label_strip_px: int = DEFAULT_LABEL_STRIP_PX,
+) -> bytes:
+    """Extract sprites from a sprite sheet and return them as a zip file.
 
     Args:
-        image_bytes: The sprite sheet image as bytes
+        image_bytes: PNG/JPEG sprite-sheet bytes.
+        n_poses: Number of figures left-to-right. Default 5.
+        label_strip_px: Pixels to crop off the bottom before slicing.
 
     Returns:
-        Zip file containing extracted sprites as bytes
+        Zip-file bytes containing `sprite_1.png` .. `sprite_N.png`, in
+        left-to-right order. Each is RGBA with a semantically-segmented alpha
+        (transparent background).
     """
-    # Convert bytes to numpy array
-    nparr = np.frombuffer(image_bytes, np.uint8)
-    sheet = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-
-    if sheet is None:
-        raise ValueError("Invalid image data")
-
-    sheet_lab = cv2.cvtColor(sheet, cv2.COLOR_BGR2LAB)
-    H, W = sheet.shape[:2]
-
-    # Detect background color from borders
-    border = 20
-    border_pixels = np.vstack(
-        [
-            sheet_lab[:border, :, :].reshape(-1, 3),
-            sheet_lab[-border:, :, :].reshape(-1, 3),
-            sheet_lab[:, :border, :].reshape(-1, 3),
-            sheet_lab[:, -border:, :].reshape(-1, 3),
-        ]
-    )
-    bg_mean = border_pixels.mean(axis=0)
-
-    # Calculate distance from background
-    dist = np.linalg.norm(sheet_lab - bg_mean, axis=2)
-    dist_norm = (dist / dist.max() * 255).astype(np.uint8)
-
-    # Threshold and morphological operations
-    _, mask0 = cv2.threshold(dist_norm, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-    mask0 = cv2.morphologyEx(
-        mask0,
-        cv2.MORPH_CLOSE,
-        cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7)),
-        iterations=2,
-    )
-
-    # Find connected components (sprite boxes)
-    num, labels, stats, _ = cv2.connectedComponentsWithStats(mask0)
-    boxes = [
-        (x, y, w, h)
-        for (_, x, y, w, h, area) in [(i, *stats[i]) for i in range(1, num)]
-        if area > 8000  # Minimum area threshold
-    ]
-    boxes.sort(key=lambda b: b[0])  # Sort by x-coordinate
-
-    # Extract individual sprites
-    sprite_buffers = []
-
-    # Asymmetric padding into the surrounding sheet background:
-    #   - generous on top  -> protect hats, hair, raised arms
-    #   - minimal on bottom -> avoid catching label text ("1. ANGRY" etc.) below
-    #   - moderate on sides -> protect outstretched arms / props
-    pad_top, pad_bottom, pad_side = 30, 5, 20
+    sheet = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+    if sheet.size[0] < n_poses * 10 or sheet.size[1] < 50:
+        raise ValueError(f"sheet too small to slice: {sheet.size}")
 
     session = _get_rembg_session()
+    sprite_buffers: List[Tuple[str, bytes]] = []
+    for i, band in _slice_into_bands(sheet, n_poses, label_strip_px):
+        cutout = remove(band, session=session)
+        buf = io.BytesIO()
+        cutout.save(buf, format="PNG")
+        sprite_buffers.append((f"sprite_{i + 1}.png", buf.getvalue()))
 
-    for idx, (x, y, w, h) in enumerate(boxes, 1):
-        # Pad the connected-component bbox so rembg sees a bit of surrounding
-        # background — improves edge quality. Asymmetric pad keeps label text
-        # below the figure out of the ROI.
-        x0 = max(0, x - pad_side)
-        y0 = max(0, y - pad_top)
-        x1 = min(W, x + w + pad_side)
-        y1 = min(H, y + h + pad_bottom)
-        roi_bgr = sheet[y0:y1, x0:x1]
-
-        # rembg expects a PIL image (or bytes); return is RGBA PIL with a
-        # semantically-segmented alpha — no more GrabCut color-confusion, so
-        # hallucinated props (e.g. a white wall the model invented) drop out.
-        roi_rgb = cv2.cvtColor(roi_bgr, cv2.COLOR_BGR2RGB)
-        cutout = remove(Image.fromarray(roi_rgb), session=session)
-
-        img_buffer = io.BytesIO()
-        cutout.save(img_buffer, format="PNG")
-        sprite_buffers.append((f"sprite_{idx}.png", img_buffer.getvalue()))
-
-    # Create zip file in memory
     zip_buffer = io.BytesIO()
     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
         for filename, data in sprite_buffers:
             zf.writestr(filename, data)
-
     return zip_buffer.getvalue()
