@@ -54,9 +54,13 @@ implied environment — IGNORE any lighting/background context mentioned in
 the character description above; this is a sprite reference sheet, not an
 in-scene illustration). Generous equal white-space gap between each pose so
 no two figures touch or share painted background. Same character in all five
-poses, identical outfit, proportions, and hair across all five. Centered
-vertical alignment, full body visible in each pose, no cast shadows that
-extend toward neighbouring figures.
+poses, identical outfit, proportions, and hair across all five. FULL
+HEAD-TO-TOE BODY in every pose — from the crown of the head down to and
+including the bare feet (or shoes if worn). NEVER crop at the dress hem,
+the knees, or the calves; both legs must be fully visible from hip to
+ground in every pose, even in slumped or self-hugging poses. Centered
+vertical alignment, no cast shadows that extend toward neighbouring
+figures.
 
 Left to right, the five expressions are:
 1. ANGRY  - {angry}
