@@ -3,6 +3,7 @@ import Home from "./pages/Home.jsx";
 import Create from "./pages/Create.jsx";
 import StoryDetails from "./pages/StoryDetails.jsx";
 import Play from "./pages/Play.jsx";
+import StoryTree from "./pages/StoryTree.jsx";
 
 function Nav() {
   const { pathname } = useLocation();
@@ -29,6 +30,7 @@ export default function App() {
         <Route path="/" element={<Home />} />
         <Route path="/create" element={<Create />} />
         <Route path="/story/:id" element={<StoryDetails />} />
+        <Route path="/story/:id/tree" element={<StoryTree />} />
         <Route path="/play/:id" element={<Play />} />
       </Routes>
     </div>

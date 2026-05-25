@@ -10,6 +10,7 @@ async function jget(url) {
 export const api = {
   listStories: () => jget(`${API}/stories`),
   getStory: (id) => jget(`${API}/stories/${id}`),
+  getStoryTree: (id) => jget(`${API}/stories/${id}/tree`),
   getDescription: () => jget(`${API}/stories/description`),
   getScene: (storyId, { choiceId = null, sceneId = null } = {}) => {
     const params = new URLSearchParams();

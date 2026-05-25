@@ -283,6 +283,72 @@ async def get_story_by_id(story_id: int):
         return story
 
 
+@router.get("/stories/{story_id}/tree")
+async def get_story_tree(story_id: int):
+    """Return the full Scene + Choice tree for the story as nodes + edges.
+
+    Nodes are scenes (including unmaterialised placeholders — `is_generated`
+    distinguishes them). Edges are choices: every choice yields one edge
+    EXCEPT terminal "The End" choices (next_scene_id is NULL) — those are
+    surfaced as `has_terminal_choice: true` on the source node instead, so
+    the graph stays a strict scene→scene tree.
+
+    Used by the SPA's `/story/{id}/tree` map view.
+    """
+    with Session(engine) as session:
+        story = session.get(Story, story_id)
+        if not story:
+            raise HTTPException(status_code=404, detail=f"no story {story_id}")
+        scenes: List[Scene] = list(
+            session.exec(select(Scene).where(Scene.story_id == story_id)).all()
+        )
+        scene_ids = [cast(int, s.id) for s in scenes]
+        choices: List[Choice] = (
+            list(
+                session.exec(
+                    select(Choice).where(Choice.scene_id.in_(scene_ids))
+                ).all()
+            )
+            if scene_ids
+            else []
+        )
+
+        terminal_sources = {c.scene_id for c in choices if c.next_scene_id is None}
+        nodes = [
+            {
+                "id": s.id,
+                "pacing": s.pacing,
+                "is_generated": s.text is not None,
+                "has_terminal_choice": s.id in terminal_sources,
+                "text_preview": ((s.text or "").split("{{break}}")[0][:120].strip()),
+            }
+            for s in scenes
+        ]
+        edges = [
+            {
+                "choice_id": c.id,
+                "from": c.scene_id,
+                "to": c.next_scene_id,
+                "text": c.text,
+                "is_wrong": bool(c.is_wrong),
+                "is_pre_final": bool(c.is_pre_final),
+            }
+            for c in choices
+            if c.next_scene_id is not None
+        ]
+        # Root = the scene with no incoming choice.
+        incoming = {c.next_scene_id for c in choices if c.next_scene_id is not None}
+        roots = [sid for sid in scene_ids if sid not in incoming]
+        root = roots[0] if roots else None
+        return {
+            "story_id": story_id,
+            "title": story.title,
+            "root_scene_id": root,
+            "nodes": nodes,
+            "edges": edges,
+        }
+
+
 def _run_asset_generation(story_id: int) -> None:
     """Background-task body — calls auto_gen and writes back the manifest.
 
