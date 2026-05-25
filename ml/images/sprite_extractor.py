@@ -131,22 +131,78 @@ def _drop_adjacent_band_intrusions(
     return Image.fromarray(arr)
 
 
+def _detect_band_boundaries(
+    sheet: Image.Image, n: int = DEFAULT_N_POSES
+) -> List[Tuple[int, int]]:
+    """Find n figure bands by locating the (n-1) widest background gaps.
+
+    Nano Banana doesn't always space the 5 figures uniformly across the
+    sheet. Fixed-width slicing therefore cuts through whichever figures
+    happen to sit near a band boundary — observed catastrophically on
+    Vera in story 6, where smiling/neutral/sad Vera were sliced down
+    the middle.
+
+    Approach: build a per-column "foreground intensity" profile (sum of
+    distance-from-white per row), smooth it, find the (n-1) widest
+    contiguous runs of near-zero foreground (real gaps between figures),
+    and slice at the centre of each gap. Robust to uneven spacing and
+    edge-aligned figures. Falls back to equal-width slicing if we can't
+    find enough gaps.
+    """
+    arr = np.array(sheet.convert("RGB"))
+    H, W = arr.shape[:2]
+    # Per-pixel distance from white.
+    dist = np.linalg.norm(arr.astype(np.int32) - 255, axis=2)
+    col_fg = dist.sum(axis=0).astype(np.float64)
+    # Smooth — kernel ≈ 0.5% of width, but at least 5 columns.
+    k = max(5, W // 200)
+    col_fg = np.convolve(col_fg, np.ones(k) / k, mode="same")
+
+    # "Background-ish" threshold relative to the column with the most fg.
+    bg_thresh = col_fg.max() * 0.05
+    is_gap = col_fg < bg_thresh
+
+    # Collect contiguous gap runs.
+    gaps: List[Tuple[int, int]] = []
+    i = 0
+    while i < W:
+        if is_gap[i]:
+            j = i
+            while j < W and is_gap[j]:
+                j += 1
+            # Drop gaps that touch the sheet edges — those are just blank
+            # margins, not divider gaps between figures.
+            if i > 0 and j < W:
+                gaps.append((i, j))
+            i = j
+        else:
+            i += 1
+
+    if len(gaps) < n - 1:
+        # Couldn't detect — fall back to equal-width slicing.
+        band_w = W // n
+        return [(i * band_w, (i + 1) * band_w if i < n - 1 else W) for i in range(n)]
+
+    # Use the (n-1) widest gaps, then re-sort by position.
+    gaps = sorted(gaps, key=lambda g: -(g[1] - g[0]))[: n - 1]
+    gaps.sort()
+
+    cuts = [0] + [(a + b) // 2 for (a, b) in gaps] + [W]
+    return [(cuts[i], cuts[i + 1]) for i in range(n)]
+
+
 def _slice_into_bands(
     sheet: Image.Image,
     n: int = DEFAULT_N_POSES,
     label_strip_px: int = DEFAULT_LABEL_STRIP_PX,
 ) -> List[Tuple[int, Image.Image]]:
-    """Return [(index, band_image), ...] — n equal-width vertical bands of the
-    sheet, with the bottom label strip cropped off."""
+    """Return [(index, band_image), ...] — n vertical bands of the sheet,
+    sliced at detected gap centres (see `_detect_band_boundaries`), with
+    the bottom label strip cropped off."""
     W, H = sheet.size
     H_eff = max(1, H - label_strip_px)
-    band_w = W // n
-    bands = []
-    for i in range(n):
-        x0 = i * band_w
-        x1 = (i + 1) * band_w if i < n - 1 else W
-        bands.append((i, sheet.crop((x0, 0, x1, H_eff))))
-    return bands
+    boundaries = _detect_band_boundaries(sheet, n)
+    return [(i, sheet.crop((x0, 0, x1, H_eff))) for i, (x0, x1) in enumerate(boundaries)]
 
 
 def extract_sprites_from_sheet(
