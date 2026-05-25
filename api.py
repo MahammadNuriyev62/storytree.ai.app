@@ -120,12 +120,32 @@ async def create_story(data: CreateStory):
 @router.get(
     "/stories/{story_id}/scene", response_model_by_alias=False, response_model=SceneDto
 )
-async def get_story(story_id: int, choice_id: Optional[int] = None):
+async def get_story(
+    story_id: int,
+    choice_id: Optional[int] = None,
+    scene_id: Optional[int] = None,
+):
     """
-    If choice_id is provided, return that Choice's next_scene.
-    Otherwise, return the Scene in this story that has no Choice.next_scene_id → it.
+    - scene_id  : direct lookup of an already-generated scene (for deep links).
+                  Must belong to this story and have non-null text.
+    - choice_id : return (or lazily generate) the Choice's next_scene.
+    - neither   : return the story's root scene (no incoming Choice.next_scene_id).
     """
     with Session(engine) as session:
+        if scene_id is not None:
+            scene = session.get(Scene, scene_id)
+            if (
+                scene is None
+                or scene.story_id != story_id
+                or scene.text is None
+            ):
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"no generated scene with id={scene_id} in story {story_id}",
+                )
+            _ = scene.choices
+            return scene
+
         if choice_id is None:
             stmt = (
                 select(Scene)

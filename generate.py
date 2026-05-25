@@ -159,15 +159,49 @@ def _stage_block(story: Story) -> str:
             lines.append(f"  - {sid}: {desc}")
     if sprites_map:
         lines.append(
-            "Available CHARACTERS in stage.characters_present (omit any not "
-            "visibly on-screen in this scene). The protagonist is ALWAYS the "
-            "POV and MUST NEVER appear here. Each entry: "
-            '{"name": <character>, "expression": <one of: angry, sad, smiling, '
-            "neutral, scared>}. Use at most 2 characters per scene; the same "
-            "character should keep an expression that matches the moment."
+            "Available CHARACTERS for stage.characters_present and the inline "
+            "tokens below (omit any not visibly on-screen). The protagonist is "
+            "ALWAYS the POV and MUST NEVER appear in either. Use at most 2 "
+            "characters on stage at the same time."
         )
         for name in sprites_map:
             lines.append(f"  - {name}")
+        lines.append(
+            "\nSTAGE TIMING — sprites AND backgrounds should change with the prose, "
+            "not stay glued through the whole scene. `stage.characters_present` is "
+            "ONLY the page-1 roster, and `stage.setting` is ONLY the page-1 background. "
+            "STRICT RULES:\n"
+            "  - If you use `{{enter:Name}}` anywhere in the text, that character MUST "
+            "NOT be in `stage.characters_present` — the enter token means they walk on "
+            "at that moment, so they can't also be there from the start. If the "
+            "protagonist is alone before anyone arrives, leave `characters_present` empty.\n"
+            "  - If the scene's prose crosses LOCATIONS (e.g. cottage -> path -> "
+            "lighthouse), `stage.setting` is the FIRST location and you MUST drop "
+            "`{{setting:X}}` tokens to swap the background as the prose moves. Don't "
+            "pick the final location as `stage.setting` if pages 1-2 happen elsewhere.\n"
+            "After page 1, embed inline tokens INSIDE the text to walk the roster + "
+            "background forward:\n"
+            "  {{enter:Name}}              - Name walks on, neutral expression\n"
+            "  {{enter:Name/expression}}    - Name walks on with a specific expression\n"
+            "  {{exit:Name}}                - Name leaves the stage\n"
+            "  {{expression:Name/expression}} - Name (already on stage) changes mood\n"
+            "  {{setting:setting_id}}       - swap the background to that setting\n"
+            "Valid expressions: angry, sad, smiling, neutral, scared.\n"
+            "Tokens are stripped before the reader sees the page — place each one at "
+            "the EXACT moment of the change. Examples:\n"
+            "  - Scene opens with Anouk alone, Iwan knocks and enters scared:\n"
+            "      stage: {\"setting\": \"cottage_interior_night\", \"characters_present\": []}\n"
+            "      text:  \"You sit by the fire, alone.{{break}}A knock at the door.\n"
+            "             {{break}}{{enter:Iwan/scared}}Iwan steps in, soaked through.\"\n"
+            "  - A scene that crosses locations (cottage -> cliffs -> lighthouse door):\n"
+            "      stage: {\"setting\": \"cottage_interior_night\", \"characters_present\": []}\n"
+            "      text:  \"You wind the scarf around your neck and step out into the dark.\n"
+            "             {{break}}{{setting:cliffs_storm}}The path is muddy and treacherous,\n"
+            "             the lighthouse beam sweeping overhead.\n"
+            "             {{break}}{{setting:lighthouse_exterior}}You reach the keeper's door\n"
+            "             and raise your hand to knock.\n"
+            "             {{break}}{{enter:Iwan/neutral}}He answers almost immediately.\"\n"
+        )
     return "\n".join(lines) + "\n"
 
 

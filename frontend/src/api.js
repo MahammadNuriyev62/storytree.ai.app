@@ -11,12 +11,13 @@ export const api = {
   listStories: () => jget(`${API}/stories`),
   getStory: (id) => jget(`${API}/stories/${id}`),
   getDescription: () => jget(`${API}/stories/description`),
-  getScene: (storyId, choiceId = null) =>
-    jget(
-      choiceId == null
-        ? `${API}/stories/${storyId}/scene`
-        : `${API}/stories/${storyId}/scene?choice_id=${choiceId}`
-    ),
+  getScene: (storyId, { choiceId = null, sceneId = null } = {}) => {
+    const params = new URLSearchParams();
+    if (choiceId != null) params.set("choice_id", choiceId);
+    if (sceneId != null) params.set("scene_id", sceneId);
+    const qs = params.toString();
+    return jget(`${API}/stories/${storyId}/scene${qs ? "?" + qs : ""}`);
+  },
   createStory: async (payload) => {
     const r = await fetch(`${API}/stories`, {
       method: "POST",

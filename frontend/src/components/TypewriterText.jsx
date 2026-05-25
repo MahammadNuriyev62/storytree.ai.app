@@ -10,12 +10,20 @@ function stripMd(s) {
     .replace(/_(.*?)_/g, "$1");
 }
 
-export default function TypewriterText({ text, speed = 16, onDone }) {
+export default function TypewriterText({ text, speed = 16, onDone, instant = false }) {
   const plain = stripMd(text);
   const [n, setN] = useState(0);
   const [done, setDone] = useState(false);
 
   useEffect(() => {
+    if (instant) {
+      // Revisiting a page the reader has already seen — render fully + fire
+      // onDone immediately so the Next button / choices appear without delay.
+      setN(plain.length);
+      setDone(true);
+      onDone && onDone();
+      return;
+    }
     setN(0);
     setDone(false);
     let i = 0;
@@ -32,7 +40,7 @@ export default function TypewriterText({ text, speed = 16, onDone }) {
     }, speed);
     return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [text]);
+  }, [text, instant]);
 
   const skip = () => {
     setN(plain.length);

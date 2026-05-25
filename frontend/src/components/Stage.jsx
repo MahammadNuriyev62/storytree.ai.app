@@ -4,7 +4,8 @@ import { motion, AnimatePresence } from "framer-motion";
 // anchored to the bottom of the viewport. The mood gradient already lives on
 // the parent <Play> element, so this component sits on top of it.
 //
-// `stage`            : { setting, characters_present } (or null/undefined)
+// `setting`          : background id (string) or null
+// `characters`       : [{name, expression}, ...] for the CURRENT page
 // `backgrounds`      : story.backgrounds manifest, keyed by setting id
 // `characterSprites` : story.character_sprites manifest, keyed by character name
 
@@ -18,17 +19,19 @@ const POSITION_LEFT_PCT = {
   right: 62,
 };
 
-export default function Stage({ stage, backgrounds, characterSprites }) {
-  const settingId = stage && stage.setting;
+export default function Stage({
+  setting,
+  characters,
+  backgrounds,
+  characterSprites,
+}) {
   const bgUrl =
-    settingId && backgrounds && backgrounds[settingId]
-      ? backgrounds[settingId].url
+    setting && backgrounds && backgrounds[setting]
+      ? backgrounds[setting].url
       : null;
 
-  const present = (stage && stage.characters_present) || [];
-
-  // Resolve each present character to {url, position, key}; drop unknown names.
-  const sprites = present
+  // Resolve each present character to {url, position, key}; drop unknowns.
+  const sprites = (characters || [])
     .map((c, i) => {
       const meta = characterSprites && characterSprites[c.name];
       if (!meta) return null;
@@ -37,7 +40,9 @@ export default function Stage({ stage, backgrounds, characterSprites }) {
         (meta.expressions[c.expression] || meta.expressions.neutral);
       if (!url) return null;
       return {
-        key: `${c.name}-${i}`,
+        // Key by name + expression so a mood swap re-animates, but identity
+        // is preserved when the same character stays put.
+        key: `${c.name}-${c.expression || "neutral"}`,
         name: c.name,
         url,
         leftPct: POSITION_LEFT_PCT[meta.position] ?? 50,
@@ -69,7 +74,7 @@ export default function Stage({ stage, backgrounds, characterSprites }) {
         <AnimatePresence>
           {sprites.map((s) => (
             <motion.img
-              key={s.key + s.url}
+              key={s.key}
               src={s.url}
               alt={s.name}
               className="sprite"

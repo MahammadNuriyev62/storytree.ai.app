@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { api } from "../api.js";
 import { moodFor, backgroundGradient, dangerLevel } from "../theme.js";
-import { paginate } from "../pagination.js";
+import { parseScene } from "../pagination.js";
 import TypewriterText from "../components/TypewriterText.jsx";
 import Hud from "../components/Hud.jsx";
 import RelationshipsPanel from "../components/RelationshipsPanel.jsx";
@@ -12,6 +12,7 @@ import Stage from "../components/Stage.jsx";
 
 export default function Play() {
   const { id } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [scene, setScene] = useState(null);
   const [title, setTitle] = useState("");
   const [storyAssets, setStoryAssets] = useState({
@@ -22,22 +23,44 @@ export default function Play() {
   const [loadingText, setLoadingText] = useState("Entering the story…");
   const [pageIndex, setPageIndex] = useState(0);
   const [pageDone, setPageDone] = useState(false);
+  // Pages the reader has fully read at least once — used to skip the
+  // typewriter when they back-navigate within the same scene.
+  const [visitedPages, setVisitedPages] = useState(() => new Set([0]));
   const [finished, setFinished] = useState(false);
   const [err, setErr] = useState(null);
   const [toasts, setToasts] = useState([]);
   const toastTimer = useRef(null);
 
-  const pages = useMemo(() => paginate(scene && scene.text), [scene && scene.text]);
+  const { pages, rosters, settings } = useMemo(
+    () =>
+      parseScene(
+        scene && scene.text,
+        scene && scene.stage && scene.stage.characters_present,
+        scene && scene.stage && scene.stage.setting,
+      ),
+    // Re-parse whenever the text OR the initial stage changes.
+    [
+      scene && scene.text,
+      scene && scene.stage && scene.stage.characters_present,
+      scene && scene.stage && scene.stage.setting,
+    ],
+  );
   const isLastPage = pageIndex >= pages.length - 1;
+  const currentRoster = rosters[pageIndex] || [];
+  const currentSetting =
+    settings[pageIndex] || (scene && scene.stage && scene.stage.setting) || null;
 
-  const load = async (choiceId) => {
+  const load = async ({ choiceId = null, sceneId = null, page = 0 } = {}) => {
     setLoading(true);
-    setPageIndex(0);
+    setPageIndex(page);
     setPageDone(false);
+    setVisitedPages(new Set([page]));
     try {
-      const s = await api.getScene(id, choiceId);
+      const s = await api.getScene(id, { choiceId, sceneId });
       setScene(s);
-      setToasts(s.state_changes || []);
+      // Suppress the "state changes" toast on URL-driven deep links — those
+      // are not real transitions the reader just made, they're navigations.
+      setToasts(sceneId ? [] : s.state_changes || []);
       clearTimeout(toastTimer.current);
       toastTimer.current = setTimeout(() => setToasts([]), 4500);
     } catch (e) {
@@ -59,10 +82,33 @@ export default function Play() {
         });
       })
       .catch(() => {});
-    load(null);
+
+    // Deep-link support: ?scene=N&page=M restores a previously-visited beat.
+    // If scene is missing or invalid the API 404s and we fall back to the root.
+    const sceneParam = searchParams.get("scene");
+    const pageParam = Math.max(0, (parseInt(searchParams.get("page") || "1", 10) || 1) - 1);
+    if (sceneParam) {
+      load({ sceneId: parseInt(sceneParam, 10), page: pageParam });
+    } else {
+      load();
+    }
     return () => clearTimeout(toastTimer.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  // Reflect the current scene + page in the URL so it can be shared / referenced.
+  // `replace: true` keeps the browser history clean (no entry per page click).
+  useEffect(() => {
+    if (!scene || !scene.id) return;
+    const want = { scene: String(scene.id), page: String(pageIndex + 1) };
+    const cur = {
+      scene: searchParams.get("scene"),
+      page: searchParams.get("page"),
+    };
+    if (cur.scene === want.scene && cur.page === want.page) return;
+    setSearchParams(want, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scene && scene.id, pageIndex]);
 
   const next = () => {
     if (!pageDone || isLastPage) return;
@@ -70,7 +116,23 @@ export default function Play() {
     setPageDone(false);
   };
 
-  // Space / ArrowRight advances to the next page.
+  const prev = () => {
+    if (pageIndex <= 0) return;
+    setPageIndex((i) => i - 1);
+    setPageDone(true); // already-read page renders instantly
+  };
+
+  const handlePageDone = () => {
+    setPageDone(true);
+    setVisitedPages((prevSet) => {
+      if (prevSet.has(pageIndex)) return prevSet;
+      const updated = new Set(prevSet);
+      updated.add(pageIndex);
+      return updated;
+    });
+  };
+
+  // Space / ArrowRight = next, ArrowLeft = previous.
   useEffect(() => {
     const onKey = (e) => {
       if (loading || finished) return;
@@ -79,12 +141,17 @@ export default function Play() {
           e.preventDefault();
           next();
         }
+      } else if (e.key === "ArrowLeft") {
+        if (pageIndex > 0) {
+          e.preventDefault();
+          prev();
+        }
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageDone, isLastPage, loading, finished]);
+  }, [pageDone, isLastPage, loading, finished, pageIndex]);
 
   const choose = (c) => {
     if (c.next_scene_id == null) {
@@ -92,12 +159,12 @@ export default function Play() {
       return;
     }
     setLoadingText(c.loading_text || "The story unfolds…");
-    load(c.id);
+    load({ choiceId: c.id });
   };
 
   const replay = () => {
     setFinished(false);
-    load(null);
+    load();
   };
 
   const mood = moodFor(scene && scene.pacing);
@@ -108,7 +175,7 @@ export default function Play() {
       <div className="min-h-screen flex items-center justify-center p-6 text-center">
         <div>
           <p className="text-red-300 mb-4">{err}</p>
-          <button onClick={() => load(null)} className="px-4 py-2 rounded-xl dark-glass">
+          <button onClick={() => load()} className="px-4 py-2 rounded-xl dark-glass">
             🔄 Retry
           </button>
         </div>
@@ -121,21 +188,32 @@ export default function Play() {
       style={{ background: backgroundGradient(mood) }}
     >
       <Stage
-        stage={scene && scene.stage}
+        setting={currentSetting}
+        characters={currentRoster}
         backgrounds={storyAssets.backgrounds}
         characterSprites={storyAssets.characterSprites}
       />
       <div className="vignette" style={{ opacity: danger }} />
       <StateChangeToasts changes={toasts} />
 
-      {/* Top bar: back + mood pill, spans full width over the stage. */}
-      <header className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-5 py-4 pointer-events-none">
-        <Link
-          to={`/story/${id}`}
-          className="text-sm text-white/80 hover:text-white dark-glass px-3 py-1.5 rounded-full pointer-events-auto"
-        >
-          ← {title || "Back"}
-        </Link>
+      {/* Top bar: back + scene/page badge + mood pill, spans full width. */}
+      <header className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-5 py-4 gap-3 pointer-events-none">
+        <div className="flex items-center gap-2 pointer-events-auto">
+          <Link
+            to={`/story/${id}`}
+            className="text-sm text-white/80 hover:text-white dark-glass px-3 py-1.5 rounded-full"
+          >
+            ← {title || "Back"}
+          </Link>
+          {scene && (
+            <span
+              className="text-[11px] font-mono text-white/60 dark-glass px-2.5 py-1 rounded-full select-all"
+              title="Reference this beat to Claude"
+            >
+              scene {scene.id} · page {pageIndex + 1}/{pages.length || 1}
+            </span>
+          )}
+        </div>
         <span
           className="text-xs uppercase tracking-widest px-3 py-1.5 rounded-full pointer-events-auto"
           style={{ background: mood.glow, color: "#fff" }}
@@ -175,19 +253,39 @@ export default function Play() {
                 exit={{ opacity: 0, y: -8 }}
                 transition={{ duration: 0.35 }}
               >
-                <TypewriterText text={pages[pageIndex]} onDone={() => setPageDone(true)} />
+                <TypewriterText
+                  text={pages[pageIndex]}
+                  instant={visitedPages.has(pageIndex)}
+                  onDone={handlePageDone}
+                />
 
-                {pageDone && !isLastPage && (
-                  <div className="mt-4 flex justify-end">
-                    <motion.button
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      onClick={next}
-                      className="px-6 py-2.5 rounded-xl dark-glass hover:scale-105 transition font-medium"
-                      title="Space or →"
-                    >
-                      Next →
-                    </motion.button>
+                {/* Page navigation row: ← Prev (if available) + Next → */}
+                {(pageIndex > 0 || (pageDone && !isLastPage)) && (
+                  <div className="mt-4 flex justify-between items-center gap-3">
+                    {pageIndex > 0 ? (
+                      <motion.button
+                        initial={{ opacity: 0, x: -8 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        onClick={prev}
+                        className="px-4 py-2 rounded-xl dark-glass hover:scale-105 transition text-sm"
+                        title="←"
+                      >
+                        ← Prev
+                      </motion.button>
+                    ) : (
+                      <span />
+                    )}
+                    {pageDone && !isLastPage && (
+                      <motion.button
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        onClick={next}
+                        className="px-6 py-2.5 rounded-xl dark-glass hover:scale-105 transition font-medium"
+                        title="Space or →"
+                      >
+                        Next →
+                      </motion.button>
+                    )}
                   </div>
                 )}
 
